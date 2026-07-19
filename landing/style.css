@@ -36,6 +36,7 @@ h2 {
   min-height: 100vh;
   display: flex;
   align-items: center;
+  position: relative;
 }
 
 .hero .container {
@@ -153,6 +154,41 @@ h2 {
   background: #333;
   margin: 0 auto;
   border-radius: 0 0 4px 4px;
+}
+
+/* Scroll Indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.3s;
+}
+
+.scroll-indicator:hover {
+  color: var(--accent);
+}
+
+.scroll-arrow {
+  width: 24px;
+  height: 24px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: rotate(45deg) translateY(0); }
+  40% { transform: rotate(45deg) translateY(-8px); }
+  60% { transform: rotate(45deg) translateY(-4px); }
 }
 
 /* Features */
