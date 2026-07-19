@@ -186,23 +186,30 @@
     </div>
   </section>
 
-  <!-- Download -->
-  <section class="download" id="download">
+  <!-- Install Guide -->
+  <section class="install-guide" id="install">
     <div class="container">
-      <h2>Download</h2>
-      <div class="download-grid">
-        <div class="download-card">
-          <div class="download-icon">📺</div>
+      <h2>Install</h2>
+      <div class="install-grid">
+        <!-- Samsung TV -->
+        <div class="install-card">
           <h3>Samsung Tizen TV</h3>
-          <p>Install via TizenBrew</p>
-          <code>npm i tizenbrew-iptv</code>
-          <a href="https://www.npmjs.com/package/tizenbrew-iptv" class="btn btn-primary" target="_blank">View on npm</a>
+          <ol class="install-steps">
+            <li>Install <a href="https://github.com/reisxd/TizenBrew" target="_blank">TizenBrew</a> on your Samsung TV</li>
+            <li>Open TizenBrew on your TV</li>
+            <li>Go to Module Manager (tab bar at the top)</li>
+            <li>Add <strong>tizenbrew-iptv</strong> as a module</li>
+          </ol>
         </div>
-        <div class="download-card">
-          <div class="download-icon">🤖</div>
+        <!-- Android TV -->
+        <div class="install-card">
           <h3>Android TV</h3>
-          <p>Sideload APK on your Android TV</p>
-          <a href="#" class="btn btn-primary">Download APK</a>
+          <ol class="install-steps">
+            <li>Download the <a href="https://github.com/thichcode/iptv-qr/releases/latest" target="_blank">latest APK</a></li>
+            <li>Transfer to your Android TV (USB, AirSend, etc.)</li>
+            <li>Install the APK (enable "Unknown sources" if needed)</li>
+            <li>Open IPTV Player and scan QR code with your phone</li>
+          </ol>
         </div>
       </div>
     </div>

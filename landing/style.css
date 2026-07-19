@@ -333,47 +333,75 @@ th {
   font-weight: 600;
 }
 
-/* Download */
-.download {
+/* Install Guide */
+.install-guide {
   padding: 100px 0;
 }
 
-.download-grid {
+.install-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 32px;
 }
 
-.download-card {
+.install-card {
   background: var(--bg-card);
   border-radius: 12px;
   padding: 40px;
-  text-align: center;
   border: 1px solid var(--border);
 }
 
-.download-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.download-card h3 {
+.install-card h3 {
   font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.download-card p {
-  color: var(--muted);
-  margin-bottom: 16px;
-}
-
-.download-card code {
-  display: block;
-  background: #111;
-  padding: 12px;
-  border-radius: 8px;
   margin-bottom: 24px;
+  color: var(--accent);
+}
+
+.install-steps {
+  list-style: none;
+  counter-reset: step;
+}
+
+.install-steps li {
+  counter-increment: step;
+  padding: 12px 0 12px 48px;
+  position: relative;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.install-steps li:last-child {
+  border-bottom: none;
+}
+
+.install-steps li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  color: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
   font-size: 14px;
+}
+
+.install-steps li a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.install-steps li a:hover {
+  text-decoration: underline;
+}
+
+.install-steps li strong {
+  color: var(--text);
 }
 
 /* Footer */
@@ -416,6 +444,6 @@ th {
   .steps { flex-direction: column; }
   .step-arrow { transform: rotate(90deg); }
   .testimonial-grid { grid-template-columns: 1fr; }
-  .download-grid { grid-template-columns: 1fr; }
+  .install-grid { grid-template-columns: 1fr; }
   .footer-content { flex-direction: column; gap: 16px; }
 }

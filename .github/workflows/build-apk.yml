@@ -244,8 +244,37 @@ jobs:
           cd android-project
           ./gradlew assembleDebug
 
+      - name: Rename APK
+        run: |
+          cp android-project/app/build/outputs/apk/debug/app-debug.apk iptv-player.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: iptv-player-debug
-          path: android-project/app/build/outputs/apk/debug/app-debug.apk
+          name: iptv-player
+          path: iptv-player.apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: IPTV Player v1.0.0
+          body: |
+            ## IPTV Player for Android TV
+
+            ### Install
+            1. Download `iptv-player.apk` below
+            2. Transfer to your Android TV (USB, AirSend, etc.)
+            3. Install the APK (enable "Unknown sources" if needed)
+            4. Open IPTV Player and scan QR code with your phone
+
+            ### Features
+            - QR code setup (no remote typing)
+            - Channel groups
+            - D-Pad remote controls
+            - Fullscreen mode
+          files: iptv-player.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
