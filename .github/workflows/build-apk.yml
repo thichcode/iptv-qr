@@ -82,8 +82,8 @@ jobs:
                   applicationId "com.tizenbrew.iptv"
                   minSdk 21
                   targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
+                  versionCode 2
+                  versionName "1.1"
               }
 
               buildTypes {
@@ -257,8 +257,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: IPTV Player v1.0.0
+          tag_name: v1.1.0
+          name: IPTV Player v1.1.0
           body: |
             ## IPTV Player for Android TV
 
