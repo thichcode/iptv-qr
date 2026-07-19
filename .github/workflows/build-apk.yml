@@ -1,0 +1,251 @@
+name: Build Android APK
+
+on:
+  push:
+    paths:
+      - 'android/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Create Android project
+        run: |
+          mkdir -p android-project/app/src/main/java/com/tizenbrew/iptv
+          mkdir -p android-project/app/src/main/assets
+          mkdir -p android-project/app/src/main/res/values
+          mkdir -p android-project/app/src/main/res/mipmap-hdpi
+          mkdir -p android-project/app/src/main/res/mipmap-mdpi
+          mkdir -p android-project/app/src/main/res/mipmap-xhdpi
+          mkdir -p android-project/app/src/main/res/mipmap-xxhdpi
+
+      - name: Create build.gradle (project)
+        run: |
+          cat > android-project/build.gradle << 'EOF'
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.0'
+              }
+          }
+
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+      - name: Create settings.gradle
+        run: |
+          cat > android-project/settings.gradle << 'EOF'
+          include ':app'
+          EOF
+
+      - name: Create gradle.properties
+        run: |
+          cat > android-project/gradle.properties << 'EOF'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
+      - name: Create app/build.gradle
+        run: |
+          cat > android-project/app/build.gradle << 'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.tizenbrew.iptv'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.tizenbrew.iptv"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'androidx.webkit:webkit:1.8.0'
+          }
+          EOF
+
+      - name: Create AndroidManifest.xml
+        run: |
+          cat > android-project/app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="IPTV Player"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.NoActionBar"
+                  android:usesCleartextTraffic="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:exported="true"
+                      android:screenOrientation="landscape">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                          <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+      - name: Create MainActivity.java
+        run: |
+          cat > android-project/app/src/main/java/com/tizenbrew/iptv/MainActivity.java << 'EOF'
+          package com.tizenbrew.iptv;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.WindowManager;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              private WebView webView;
+
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+
+                  webView = new WebView(this);
+                  setContentView(webView);
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setAllowFileAccess(true);
+                  settings.setMediaPlaybackRequiresUserGesture(false);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.setWebChromeClient(new WebChromeClient());
+
+                  webView.loadUrl("file:///android_asset/index.html");
+
+                  hideSystemUI();
+              }
+
+              private void hideSystemUI() {
+                  getWindow().getDecorView().setSystemUiVisibility(
+                          View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                  | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                  | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                                  | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                  | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                  | View.SYSTEM_UI_FLAG_FULLSCREEN);
+              }
+
+              @Override
+              public void onWindowFocusChanged(boolean hasFocus) {
+                  super.onWindowFocusChanged(hasFocus);
+                  if (hasFocus) {
+                      hideSystemUI();
+                  }
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+
+      - name: Copy web assets
+        run: |
+          cp -r android/* android-project/app/src/main/assets/
+
+      - name: Generate launcher icon
+        run: |
+          cat > android-project/app/src/main/res/values/colors.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#1a1a1a</color>
+          </resources>
+          EOF
+
+          cat > android-project/app/src/main/res/values/styles.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="Theme.AppCompat.NoActionBar" parent="Theme.AppCompat.NoActionBar">
+                  <item name="android:windowNoTitle">true</item>
+                  <item name="android:windowFullscreen">true</item>
+              </style>
+          </resources>
+          EOF
+
+      - name: Generate simple icon using ImageMagick
+        run: |
+          sudo apt-get install -y imagemagick
+          convert -size 48x48 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 24 -annotate 0 'TV' android-project/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          convert -size 72x72 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 36 -annotate 0 'TV' android-project/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          convert -size 96x96 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 48 -annotate 0 'TV' android-project/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          convert -size 144x144 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 72 -annotate 0 'TV' android-project/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+
+      - name: Make gradlew executable
+        run: |
+          cd android-project
+          gradle wrapper --gradle-version 8.4
+
+      - name: Build APK
+        run: |
+          cd android-project
+          ./gradlew assembleDebug
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iptv-player-debug
+          path: android-project/app/build/outputs/apk/debug/app-debug.apk
