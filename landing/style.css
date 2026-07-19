@@ -1,0 +1,385 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #1a1a1a;
+  --bg-card: #2a2a2a;
+  --accent: #ffd600;
+  --text: #fff;
+  --muted: #888;
+  --border: #333;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+h2 {
+  font-size: 36px;
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.accent { color: var(--accent); }
+
+/* Hero */
+.hero {
+  padding: 80px 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+}
+
+.hero .container {
+  display: flex;
+  align-items: center;
+  gap: 60px;
+}
+
+.hero-content { flex: 1; }
+
+.hero-content h1 {
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 24px;
+}
+
+.tagline {
+  font-size: 20px;
+  color: var(--muted);
+  margin-bottom: 32px;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 14px 32px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+
+.btn-secondary {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* TV Mockup */
+.hero-mockup { flex: 1; display: flex; justify-content: center; }
+
+.tv-frame {
+  background: #111;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.tv-screen {
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 400px;
+}
+
+.tv-header {
+  padding: 12px 16px;
+  background: #111;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.tv-body {
+  display: flex;
+  height: 220px;
+}
+
+.tv-player {
+  flex: 1;
+  background: #111;
+}
+
+.tv-sidebar {
+  width: 140px;
+  background: #111;
+  border-left: 1px solid var(--border);
+  padding: 8px 0;
+}
+
+.tv-channel {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.tv-channel.active {
+  background: #2a2a2a;
+  border-left: 3px solid var(--accent);
+  padding-left: 9px;
+}
+
+.tv-footer {
+  padding: 10px 16px;
+  background: #111;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.tv-stand {
+  width: 80px;
+  height: 20px;
+  background: #333;
+  margin: 0 auto;
+  border-radius: 0 0 4px 4px;
+}
+
+/* Features */
+.features {
+  padding: 100px 0;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 32px;
+  border: 1px solid var(--border);
+}
+
+.feature-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+}
+
+.feature-card h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.feature-card p {
+  color: var(--muted);
+}
+
+/* How it works */
+.how-it-works {
+  padding: 100px 0;
+  background: var(--bg-card);
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.step {
+  text-align: center;
+  flex: 1;
+  max-width: 250px;
+}
+
+.step-number {
+  width: 60px;
+  height: 60px;
+  background: var(--accent);
+  color: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 auto 16px;
+}
+
+.step h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.step p {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.step-arrow {
+  font-size: 32px;
+  color: var(--accent);
+}
+
+/* Comparison */
+.comparison {
+  padding: 100px 0;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+th, td {
+  padding: 16px 24px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  background: #222;
+  font-weight: 600;
+}
+
+.highlight {
+  color: var(--accent);
+}
+
+/* Testimonials */
+.testimonials {
+  padding: 100px 0;
+  background: var(--bg-card);
+}
+
+.testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.testimonial-card {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 32px;
+  border: 1px solid var(--border);
+}
+
+.testimonial-card p {
+  font-size: 16px;
+  margin-bottom: 16px;
+  font-style: italic;
+}
+
+.testimonial-author {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Download */
+.download {
+  padding: 100px 0;
+}
+
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px;
+}
+
+.download-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.download-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.download-card h3 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.download-card p {
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.download-card code {
+  display: block;
+  background: #111;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+/* Footer */
+.footer {
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-brand {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-links a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  color: var(--accent);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero .container { flex-direction: column; text-align: center; }
+  .hero-content h1 { font-size: 40px; }
+  .cta-buttons { justify-content: center; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .steps { flex-direction: column; }
+  .step-arrow { transform: rotate(90deg); }
+  .testimonial-grid { grid-template-columns: 1fr; }
+  .download-grid { grid-template-columns: 1fr; }
+  .footer-content { flex-direction: column; gap: 16px; }
+}

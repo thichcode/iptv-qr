@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPTV Player</title>
+</head>
+<body>
+  <div id="status-text">Loading IPTV Player...</div>
+  <script>
+    window.onerror = function (message, source, line) {
+      var status = document.getElementById('status-text');
+      if (status) status.textContent = 'Startup error: ' + message + ' (line ' + line + ')';
+    };
+  </script>
+  <script src="./dist/inject.js"></script>
+</body>
+</html>
