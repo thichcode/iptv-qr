@@ -4,7 +4,7 @@
   var LS = "tizenbrewIptv:playlistUrl";
   var setupCode = "";
   var setupTimer = null;
-  var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, H = null, B = {
+  var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, H = null, M = null, B = {
     13: "Enter",
     27: "Escape",
     32: " ",
@@ -625,7 +625,19 @@
 
   function stopPlayback() {
     if (H) { H.destroy(); H = null; }
+    if (M) { M.destroy(); M = null; }
     if (a) { a.removeAttribute("src"); a.load(); }
+  }
+
+  function tryNativePlayback(url) {
+    a.src = url;
+    a.onerror = function() {
+      var r = a.error;
+      d("Error: " + (r ? r.message || "code " + r.code : "unknown"));
+    };
+    a.oncanplay = function() { d("Playing"); };
+    var t = a.play();
+    t && t["catch"] && t["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
   }
 
   function y(e) {
@@ -645,15 +657,20 @@
         H.on(Hls.Events.ERROR, function(e, data) {
           if (data.fatal) { d("HLS error"); H.destroy(); H = null; }
         });
+      } else if (typeof mpegts !== "undefined" && !/\.mp4/i.test(n.url)) {
+        try {
+          M = new mpegts.Player(n.url, { enableWorker: true, lazyLoad: true, liveBufferLatency: 3 });
+          M.on(mpegts.Events.ERROR, function() { d("Stream error"); M.destroy(); M = null; });
+          M.on(mpegts.Events.LOADING_COMPLETE, function() { d("Playing"); });
+          M.attachMediaElement(a);
+          M.load();
+          M.play()["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
+          d("Playing");
+        } catch (r) {
+          tryNativePlayback(n.url);
+        }
       } else {
-        a.src = n.url;
-        a.onerror = function() {
-          var r = a.error;
-          d("Error: " + (r ? r.message || "code " + r.code : "unknown"));
-        };
-        a.oncanplay = function() { d("Playing"); };
-        var t = a.play();
-        t && t["catch"] && t["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
+        tryNativePlayback(n.url);
       }
       g();
     }
