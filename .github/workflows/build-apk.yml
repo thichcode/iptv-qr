@@ -189,6 +189,7 @@ jobs:
 
                   webView = new WebView(this);
                   webView.setBackgroundColor(Color.TRANSPARENT);
+                  webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
                   root.addView(webView, new FrameLayout.LayoutParams(
                           ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 

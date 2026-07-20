@@ -649,8 +649,11 @@
       stopPlayback();
       if (typeof window.NativePlayer !== "undefined") {
         nUrl = n.url;
+        document.body.style.background = "transparent";
         var pw = document.getElementById("player-wrap");
         if (pw) pw.style.background = "transparent";
+        var app = document.getElementById("app");
+        if (app) app.style.background = "transparent";
         a.style.background = "transparent";
         a.style.opacity = "0";
         a.controls = !1;
