@@ -4,7 +4,7 @@
   var LS = "tizenbrewIptv:playlistUrl";
   var setupCode = "";
   var setupTimer = null;
-  var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, B = {
+  var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, H = null, B = {
     13: "Enter",
     27: "Escape",
     32: " ",
@@ -623,16 +623,38 @@
     }
   }
 
+  function stopPlayback() {
+    if (H) { H.destroy(); H = null; }
+    if (a) { a.removeAttribute("src"); a.load(); }
+  }
+
   function y(e) {
     if (!(e < 0 || e >= i.length || !a)) {
       V = !0, p = e;
       var n = i[e];
-      D(e), E("Now Playing: " + n.name), d("Loading stream..."), a.src = n.url, a.onerror = function() {
-        var r = a.error;
-        d("Error: " + (r ? r.message || "code " + r.code : "unknown"));
-      }, a.oncanplay = function() { d("Playing"); };
-      var t = a.play();
-      t && t.catch && t.catch(function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
+      D(e), E("Now Playing: " + n.name), d("Loading stream...");
+      stopPlayback();
+      if (typeof Hls !== "undefined" && /\.m3u8/i.test(n.url)) {
+        H = new Hls();
+        H.loadSource(n.url);
+        H.attachMedia(a);
+        H.on(Hls.Events.MANIFEST_PARSED, function() {
+          a.play()["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
+          d("Playing");
+        });
+        H.on(Hls.Events.ERROR, function(e, data) {
+          if (data.fatal) { d("HLS error"); H.destroy(); H = null; }
+        });
+      } else {
+        a.src = n.url;
+        a.onerror = function() {
+          var r = a.error;
+          d("Error: " + (r ? r.message || "code " + r.code : "unknown"));
+        };
+        a.oncanplay = function() { d("Playing"); };
+        var t = a.play();
+        t && t["catch"] && t["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
+      }
       g();
     }
   }
@@ -761,7 +783,7 @@
         break;
       case "MediaStop":
         e.preventDefault();
-        if (a) { a.pause(); a.src = ""; }
+        stopPlayback();
         break;
       default:
         n && n >= "0" && n <= "9" && (e.preventDefault(), v += n, w && clearTimeout(w), w = setTimeout(Y, 1e3));
