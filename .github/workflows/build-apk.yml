@@ -162,7 +162,7 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import android.widget.FrameLayout;
-          import android.widget.TextureView;
+          import android.view.TextureView;
 
           import androidx.annotation.NonNull;
           import androidx.media3.common.MediaItem;
