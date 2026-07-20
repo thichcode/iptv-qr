@@ -67,6 +67,12 @@ jobs:
           org.gradle.jvmargs=-Xmx2048m
           EOF
 
+      - name: Set version from run number
+        run: |
+          echo "VERSION_CODE=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "VERSION_NAME=1.1.${{ github.run_number }}" >> $GITHUB_ENV
+          echo "TAG_NAME=v1.1.${{ github.run_number }}" >> $GITHUB_ENV
+
       - name: Create app/build.gradle
         run: |
           cat > android-project/app/build.gradle << 'EOF'
@@ -82,8 +88,8 @@ jobs:
                   applicationId "com.tizenbrew.iptv"
                   minSdk 21
                   targetSdk 34
-                  versionCode 2
-                  versionName "1.1"
+                  versionCode ${{ env.VERSION_CODE }}
+                  versionName "${{ env.VERSION_NAME }}"
               }
 
               buildTypes {
@@ -257,10 +263,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: IPTV Player v1.1.0
+          tag_name: ${{ env.TAG_NAME }}
+          name: IPTV Player ${{ env.VERSION_NAME }}
           body: |
-            ## IPTV Player for Android TV
+            ## IPTV Player for Android TV v${{ env.VERSION_NAME }}
 
             ### Install
             1. Download `iptv-player.apk` below
@@ -274,6 +280,7 @@ jobs:
             - D-Pad remote controls
             - Fullscreen mode
           files: iptv-player.apk
+          make_latest: true
           draft: false
           prerelease: false
         env:
