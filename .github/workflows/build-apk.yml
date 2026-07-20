@@ -110,6 +110,7 @@ jobs:
           dependencies {
               implementation 'androidx.appcompat:appcompat:1.6.1'
               implementation 'androidx.webkit:webkit:1.8.0'
+              implementation 'androidx.media3:media3-exoplayer:1.1.1'
           }
           EOF
 
@@ -146,41 +147,118 @@ jobs:
 
       - name: Create MainActivity.java
         run: |
-          cat > android-project/app/src/main/java/com/tizenbrew/iptv/MainActivity.java << 'EOF'
+          cat > android-project/app/src/main/java/com/tizenbrew/iptv/MainActivity.java << 'JAVAEOF'
           package com.tizenbrew.iptv;
 
           import android.app.Activity;
+          import android.graphics.Color;
+          import android.net.Uri;
           import android.os.Bundle;
           import android.view.View;
-          import android.view.WindowManager;
+          import android.view.ViewGroup;
+          import android.webkit.JavascriptInterface;
           import android.webkit.WebChromeClient;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
+          import android.widget.FrameLayout;
+          import android.widget.TextureView;
 
+          import androidx.annotation.NonNull;
+          import androidx.media3.common.MediaItem;
+          import androidx.media3.common.PlaybackException;
+          import androidx.media3.common.Player;
+          import androidx.media3.common.util.UnstableApi;
+          import androidx.media3.exoplayer.ExoPlayer;
+
+          @UnstableApi
           public class MainActivity extends Activity {
               private WebView webView;
+              private ExoPlayer player;
+              private TextureView textureView;
 
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
 
-                  webView = new WebView(this);
-                  setContentView(webView);
+                  FrameLayout root = new FrameLayout(this);
 
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setAllowFileAccess(true);
-                  settings.setMediaPlaybackRequiresUserGesture(false);
-                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  textureView = new TextureView(this);
+                  root.addView(textureView, new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+                  webView = new WebView(this);
+                  webView.setBackgroundColor(Color.TRANSPARENT);
+                  root.addView(webView, new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+                  setContentView(root);
+
+                  WebSettings s = webView.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setAllowFileAccess(true);
+                  s.setMediaPlaybackRequiresUserGesture(false);
+                  s.setCacheMode(WebSettings.LOAD_DEFAULT);
 
                   webView.setWebViewClient(new WebViewClient());
                   webView.setWebChromeClient(new WebChromeClient());
-
+                  webView.addJavascriptInterface(new PlayerBridge(), "NativePlayer");
                   webView.loadUrl("file:///android_asset/index.html");
-
                   hideSystemUI();
+              }
+
+              private void startPlayback(String url) {
+                  releasePlayer();
+                  player = new ExoPlayer.Builder(this).build();
+                  player.setVideoTextureView(textureView);
+                  textureView.setVisibility(View.VISIBLE);
+                  player.addListener(new Player.Listener() {
+                      @Override public void onPlaybackStateChanged(int state) {
+                          if (state == Player.STATE_READY)
+                              js("window._onNativeReady && window._onNativeReady()");
+                          else if (state == Player.STATE_ENDED)
+                              js("window._onNativeEnded && window._onNativeEnded()");
+                      }
+                      @Override public void onPlayerError(@NonNull PlaybackException e) {
+                          js("window._onNativeError && window._onNativeError('" + esc(e.getMessage()) + "')");
+                      }
+                  });
+                  player.setMediaItem(MediaItem.fromUri(Uri.parse(url)));
+                  player.prepare();
+                  player.play();
+              }
+
+              private void releasePlayer() {
+                  if (player != null) { player.release(); player = null; }
+                  textureView.setVisibility(View.GONE);
+              }
+
+              private void js(String code) {
+                  webView.evaluateJavascript(code, null);
+              }
+
+              private static String esc(String s) {
+                  return s == null ? "unknown" : s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
+              }
+
+              public class PlayerBridge {
+                  @JavascriptInterface public void play(String url) { runOnUiThread(() -> startPlayback(url)); }
+                  @JavascriptInterface public void pause() { runOnUiThread(() -> { if (player != null) player.pause(); }); }
+                  @JavascriptInterface public void resume() { runOnUiThread(() -> { if (player != null) player.play(); }); }
+                  @JavascriptInterface public void stop() { runOnUiThread(() -> releasePlayer()); }
+                  @JavascriptInterface public boolean isPlaying() { return player != null && player.isPlaying(); }
+                  @JavascriptInterface public void seek(long ms) { runOnUiThread(() -> {
+                      if (player != null) player.seekTo(Math.max(0, player.getCurrentPosition() + ms));
+                  }); }
+                  @JavascriptInterface public long getPosition() { return player != null ? player.getCurrentPosition() : 0; }
+                  @JavascriptInterface public long getDuration() { return player != null ? player.getDuration() : -1; }
+                  @JavascriptInterface public void setVolume(float delta) { runOnUiThread(() -> {
+                      if (player != null) player.setVolume(Math.max(0f, Math.min(1f, player.getVolume() + delta)));
+                  }); }
+                  @JavascriptInterface public void setSpeed(float speed) { runOnUiThread(() -> {
+                      if (player != null) player.setPlaybackSpeed(speed);
+                  }); }
               }
 
               private void hideSystemUI() {
@@ -196,21 +274,21 @@ jobs:
               @Override
               public void onWindowFocusChanged(boolean hasFocus) {
                   super.onWindowFocusChanged(hasFocus);
-                  if (hasFocus) {
-                      hideSystemUI();
-                  }
+                  if (hasFocus) { hideSystemUI(); }
               }
 
               @Override
               public void onBackPressed() {
-                  if (webView.canGoBack()) {
-                      webView.goBack();
-                  } else {
-                      super.onBackPressed();
-                  }
+                  if (webView.canGoBack()) { webView.goBack(); } else { super.onBackPressed(); }
+              }
+
+              @Override
+              protected void onDestroy() {
+                  releasePlayer();
+                  super.onDestroy();
               }
           }
-          EOF
+          JAVAEOF
 
       - name: Copy web assets
         run: |

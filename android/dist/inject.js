@@ -4,7 +4,7 @@
   var LS = "tizenbrewIptv:playlistUrl";
   var setupCode = "";
   var setupTimer = null;
-  var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, H = null, M = null, B = {
+  var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, hlsInst = null, tsInst = null, nUrl = "", B = {
     13: "Enter",
     27: "Escape",
     32: " ",
@@ -624,8 +624,9 @@
   }
 
   function stopPlayback() {
-    if (H) { H.destroy(); H = null; }
-    if (M) { M.destroy(); M = null; }
+    if (typeof window.NativePlayer !== "undefined") { window.NativePlayer.stop(); nUrl = ""; }
+    if (hlsInst) { hlsInst.destroy(); hlsInst = null; }
+    if (tsInst) { tsInst.destroy(); tsInst = null; }
     if (a) { a.removeAttribute("src"); a.load(); }
   }
 
@@ -646,22 +647,30 @@
       var n = i[e];
       D(e), E("Now Playing: " + n.name), d("Loading stream...");
       stopPlayback();
-      if (typeof Hls !== "undefined" && /\.m3u8/i.test(n.url)) {
-        H = new Hls();
-        H.loadSource(n.url);
-        H.attachMedia(a);
-        H.on(Hls.Events.MANIFEST_PARSED, function() {
+      if (typeof window.NativePlayer !== "undefined") {
+        nUrl = n.url;
+        var pw = document.getElementById("player-wrap");
+        if (pw) pw.style.background = "transparent";
+        a.style.background = "transparent";
+        a.style.opacity = "0";
+        a.controls = !1;
+        window.NativePlayer.play(n.url);
+      } else if (typeof Hls !== "undefined" && /\.m3u8/i.test(n.url)) {
+        hlsInst = new Hls();
+        hlsInst.loadSource(n.url);
+        hlsInst.attachMedia(a);
+        hlsInst.on(Hls.Events.MANIFEST_PARSED, function() {
           a.play()["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
           d("Playing");
         });
-        H.on(Hls.Events.ERROR, function(e, data) {
-          if (data.fatal) { d("HLS error"); H.destroy(); H = null; }
+        hlsInst.on(Hls.Events.ERROR, function(e, data) {
+          if (data.fatal) { d("HLS error"); hlsInst.destroy(); hlsInst = null; }
         });
       } else if (typeof mpegts !== "undefined" && !/\.mp4/i.test(n.url)) {
         try {
-          M = new mpegts.Player({ type: "mpegts", url: n.url, isLive: !0 }, { enableWorker: !1, lazyLoad: !0, liveBufferLatency: 3 });
-          M.attachMediaElement(a);
-          M.load();
+          tsInst = new mpegts.Player({ type: "mpegts", url: n.url, isLive: !0 }, { enableWorker: !1, lazyLoad: !0, liveBufferLatency: 3 });
+          tsInst.attachMediaElement(a);
+          tsInst.load();
           var started = !1;
           function onPlayReady() {
             if (!started) { started = !0; a.play()["catch"](function(r) { d("Error: " + (r.message || "play failed")); }); d("Playing"); }
@@ -669,8 +678,8 @@
           a.addEventListener("canplay", onPlayReady, { once: !0 });
           a.addEventListener("playing", onPlayReady, { once: !0 });
           var tsTimer = setTimeout(function() { onPlayReady(); }, 3e3);
-          M.on(mpegts.Events.ERROR, function(e, data) { d("Stream error: " + (data || "unknown")); M.destroy(); M = null; clearTimeout(tsTimer); });
-          M.on(mpegts.Events.RECOVERED_EARLY_EOF, onPlayReady);
+          tsInst.on(mpegts.Events.ERROR, function(e, data) { d("Stream error: " + (data || "unknown")); tsInst.destroy(); tsInst = null; clearTimeout(tsTimer); });
+          tsInst.on(mpegts.Events.RECOVERED_EARLY_EOF, onPlayReady);
         } catch (r) {
           tryNativePlayback(n.url);
         }
@@ -707,6 +716,11 @@
   }
 
   function X() {
+    if (typeof window.NativePlayer !== "undefined") {
+      if (window.NativePlayer.isPlaying()) { window.NativePlayer.pause(); }
+      else if (nUrl) { window.NativePlayer.play(nUrl); }
+      return;
+    }
     if (a) {
       if (a.paused) {
         var e = a.play();
@@ -715,8 +729,14 @@
     }
   }
 
-  function P(e) { a && (a.currentTime = Math.max(0, a.currentTime + e)); }
-  function A(e) { a && (a.volume = Math.max(0, Math.min(1, a.volume + e))); }
+  function P(e) {
+    if (typeof window.NativePlayer !== "undefined") { window.NativePlayer.seek(e * 1e3); return; }
+    if (a) a.currentTime = Math.max(0, a.currentTime + e);
+  }
+  function A(e) {
+    if (typeof window.NativePlayer !== "undefined") { window.NativePlayer.setVolume(e); return; }
+    if (a) a.volume = Math.max(0, Math.min(1, a.volume + e));
+  }
 
   function Y() {
     if (v) {
@@ -830,6 +850,10 @@
     try { I = localStorage.getItem(LS) || ""; } catch (err) { I = ""; }
     if (I) K(); else showSetup();
   }
+
+  window._onNativeReady = function() { d("Playing"); };
+  window._onNativeEnded = function() { d("Stream ended"); };
+  window._onNativeError = function(msg) { d("Error: " + (msg || "unknown")); };
 
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", O) : O();
 })();
