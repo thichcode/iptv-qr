@@ -659,13 +659,18 @@
         });
       } else if (typeof mpegts !== "undefined" && !/\.mp4/i.test(n.url)) {
         try {
-          M = new mpegts.Player(n.url, { enableWorker: true, lazyLoad: true, liveBufferLatency: 3 });
-          M.on(mpegts.Events.ERROR, function() { d("Stream error"); M.destroy(); M = null; });
-          M.on(mpegts.Events.LOADING_COMPLETE, function() { d("Playing"); });
+          M = new mpegts.Player({ type: "mpegts", url: n.url, isLive: !0 }, { enableWorker: !1, lazyLoad: !0, liveBufferLatency: 3 });
           M.attachMediaElement(a);
           M.load();
-          M.play()["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
-          d("Playing");
+          var started = !1;
+          function onPlayReady() {
+            if (!started) { started = !0; a.play()["catch"](function(r) { d("Error: " + (r.message || "play failed")); }); d("Playing"); }
+          }
+          a.addEventListener("canplay", onPlayReady, { once: !0 });
+          a.addEventListener("playing", onPlayReady, { once: !0 });
+          var tsTimer = setTimeout(function() { onPlayReady(); }, 3e3);
+          M.on(mpegts.Events.ERROR, function(e, data) { d("Stream error: " + (data || "unknown")); M.destroy(); M = null; clearTimeout(tsTimer); });
+          M.on(mpegts.Events.RECOVERED_EARLY_EOF, onPlayReady);
         } catch (r) {
           tryNativePlayback(n.url);
         }
