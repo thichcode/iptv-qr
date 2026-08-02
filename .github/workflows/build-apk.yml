@@ -177,6 +177,18 @@ jobs:
               private ExoPlayer player;
               private TextureView textureView;
 
+              private final Player.Listener playerListener = new Player.Listener() {
+                  @Override public void onPlaybackStateChanged(int state) {
+                      if (state == Player.STATE_READY)
+                          js("window._onNativeReady && window._onNativeReady()");
+                      else if (state == Player.STATE_ENDED)
+                          js("window._onNativeEnded && window._onNativeEnded()");
+                  }
+                  @Override public void onPlayerError(@NonNull PlaybackException e) {
+                      js("window._onNativeError && window._onNativeError('" + esc(e.getMessage()) + "')");
+                  }
+              };
+
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
@@ -209,29 +221,29 @@ jobs:
                   hideSystemUI();
               }
 
-              private void startPlayback(String url) {
-                  releasePlayer();
-                  player = new ExoPlayer.Builder(this).build();
-                  player.setVideoTextureView(textureView);
+              private void ensurePlayer() {
+                  if (player == null) {
+                      player = new ExoPlayer.Builder(this).build();
+                      player.setVideoTextureView(textureView);
+                      player.addListener(playerListener);
+                  }
                   textureView.setVisibility(View.VISIBLE);
-                  player.addListener(new Player.Listener() {
-                      @Override public void onPlaybackStateChanged(int state) {
-                          if (state == Player.STATE_READY)
-                              js("window._onNativeReady && window._onNativeReady()");
-                          else if (state == Player.STATE_ENDED)
-                              js("window._onNativeEnded && window._onNativeEnded()");
-                      }
-                      @Override public void onPlayerError(@NonNull PlaybackException e) {
-                          js("window._onNativeError && window._onNativeError('" + esc(e.getMessage()) + "')");
-                      }
-                  });
+              }
+
+              private void startPlayback(String url) {
+                  ensurePlayer();
+                  player.stop();
                   player.setMediaItem(MediaItem.fromUri(Uri.parse(url)));
                   player.prepare();
                   player.play();
               }
 
               private void releasePlayer() {
-                  if (player != null) { player.release(); player = null; }
+                  if (player != null) {
+                      player.removeListener(playerListener);
+                      player.release();
+                      player = null;
+                  }
                   textureView.setVisibility(View.GONE);
               }
 

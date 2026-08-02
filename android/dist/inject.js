@@ -646,7 +646,6 @@
       V = !0, p = e;
       var n = i[e];
       D(e), E("Now Playing: " + n.name), d("Loading stream...");
-      stopPlayback();
       if (typeof window.NativePlayer !== "undefined") {
         nUrl = n.url;
         document.body.style.background = "transparent";
@@ -658,36 +657,39 @@
         a.style.opacity = "0";
         a.controls = !1;
         window.NativePlayer.play(n.url);
-      } else if (typeof Hls !== "undefined" && /\.m3u8/i.test(n.url)) {
-        hlsInst = new Hls();
-        hlsInst.loadSource(n.url);
-        hlsInst.attachMedia(a);
-        hlsInst.on(Hls.Events.MANIFEST_PARSED, function() {
-          a.play()["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
-          d("Playing");
-        });
-        hlsInst.on(Hls.Events.ERROR, function(e, data) {
-          if (data.fatal) { d("HLS error"); hlsInst.destroy(); hlsInst = null; }
-        });
-      } else if (typeof mpegts !== "undefined" && !/\.mp4/i.test(n.url)) {
-        try {
-          tsInst = new mpegts.Player({ type: "mpegts", url: n.url, isLive: !0 }, { enableWorker: !1, lazyLoad: !0, liveBufferLatency: 3 });
-          tsInst.attachMediaElement(a);
-          tsInst.load();
-          var started = !1;
-          function onPlayReady() {
-            if (!started) { started = !0; a.play()["catch"](function(r) { d("Error: " + (r.message || "play failed")); }); d("Playing"); }
+      } else {
+        stopPlayback();
+        if (typeof Hls !== "undefined" && /\.m3u8/i.test(n.url)) {
+          hlsInst = new Hls();
+          hlsInst.loadSource(n.url);
+          hlsInst.attachMedia(a);
+          hlsInst.on(Hls.Events.MANIFEST_PARSED, function() {
+            a.play()["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
+            d("Playing");
+          });
+          hlsInst.on(Hls.Events.ERROR, function(e, data) {
+            if (data.fatal) { d("HLS error"); hlsInst.destroy(); hlsInst = null; }
+          });
+        } else if (typeof mpegts !== "undefined" && !/\.mp4/i.test(n.url)) {
+          try {
+            tsInst = new mpegts.Player({ type: "mpegts", url: n.url, isLive: !0 }, { enableWorker: !1, lazyLoad: !0, liveBufferLatency: 3 });
+            tsInst.attachMediaElement(a);
+            tsInst.load();
+            var started = !1;
+            function onPlayReady() {
+              if (!started) { started = !0; a.play()["catch"](function(r) { d("Error: " + (r.message || "play failed")); }); d("Playing"); }
+            }
+            a.addEventListener("canplay", onPlayReady, { once: !0 });
+            a.addEventListener("playing", onPlayReady, { once: !0 });
+            var tsTimer = setTimeout(function() { onPlayReady(); }, 3e3);
+            tsInst.on(mpegts.Events.ERROR, function(e, data) { d("Stream error: " + (data || "unknown")); tsInst.destroy(); tsInst = null; clearTimeout(tsTimer); });
+            tsInst.on(mpegts.Events.RECOVERED_EARLY_EOF, onPlayReady);
+          } catch (r) {
+            tryNativePlayback(n.url);
           }
-          a.addEventListener("canplay", onPlayReady, { once: !0 });
-          a.addEventListener("playing", onPlayReady, { once: !0 });
-          var tsTimer = setTimeout(function() { onPlayReady(); }, 3e3);
-          tsInst.on(mpegts.Events.ERROR, function(e, data) { d("Stream error: " + (data || "unknown")); tsInst.destroy(); tsInst = null; clearTimeout(tsTimer); });
-          tsInst.on(mpegts.Events.RECOVERED_EARLY_EOF, onPlayReady);
-        } catch (r) {
+        } else {
           tryNativePlayback(n.url);
         }
-      } else {
-        tryNativePlayback(n.url);
       }
       g();
     }
