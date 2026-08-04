@@ -232,10 +232,13 @@ jobs:
 
               private void startPlayback(String url) {
                   ensurePlayer();
-                  player.stop();
-                  player.setMediaItem(MediaItem.fromUri(Uri.parse(url)));
-                  player.prepare();
-                  player.play();
+                  try {
+                      player.setMediaItem(MediaItem.fromUri(Uri.parse(url)));
+                      player.prepare();
+                      player.play();
+                  } catch (Exception e) {
+                      js("window._onNativeError && window._onNativeError('playback error: " + esc(e.getMessage()) + "')");
+                  }
               }
 
               private void releasePlayer() {
