@@ -317,7 +317,7 @@ jobs:
           cat > android-project/app/src/main/res/values/colors.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <resources>
-              <color name="ic_launcher_background">#1a1a1a</color>
+              <color name="ic_launcher_background">#080907</color>
           </resources>
           EOF
 
@@ -331,13 +331,48 @@ jobs:
           </resources>
           EOF
 
-      - name: Generate simple icon using ImageMagick
+      - name: Generate IPTV+QR icon using ImageMagick
         run: |
           sudo apt-get install -y imagemagick
-          convert -size 48x48 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 24 -annotate 0 'TV' android-project/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          convert -size 72x72 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 36 -annotate 0 'TV' android-project/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          convert -size 96x96 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 48 -annotate 0 'TV' android-project/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          convert -size 144x144 xc:'#1a1a1a' -fill '#ffd600' -gravity center -pointsize 72 -annotate 0 'TV' android-project/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+
+          generate_icon() {
+            local SIZE=$1
+            local OUT=$2
+            local FONT_SIZE=$((SIZE * 28 / 100))
+            local QR_SIZE=$((SIZE * 22 / 100))
+            local QR_X=$((SIZE - QR_SIZE - SIZE * 6 / 100))
+            local QR_Y=$((SIZE - QR_SIZE - SIZE * 6 / 100))
+            local CELL=$((QR_SIZE / 7))
+
+            convert -size ${SIZE}x${SIZE} xc:'#080907' \
+              -fill '#d8ff45' -font DejaVu-Sans-Bold -pointsize ${FONT_SIZE} \
+              -gravity center -annotate +0-$((${SIZE}/12)) 'IPTV' \
+              \( -size ${QR_SIZE}x${QR_SIZE} xc:'#080907' \
+                 -fill '#d8ff45' \
+                 -draw "rectangle 0,0 $((CELL-1)),$((CELL-1))" \
+                 -draw "rectangle $((CELL*2)),0 $((CELL*3-1)),$((CELL-1))" \
+                 -draw "rectangle $((CELL*4)),0 $((CELL*5-1)),$((CELL-1))" \
+                 -draw "rectangle $((CELL*6)),0 $((CELL*7-1)),$((CELL-1))" \
+                 -draw "rectangle 0,$((CELL*2)) $((CELL-1)),$((CELL*3-1))" \
+                 -draw "rectangle $((CELL*2)),$((CELL*2)) $((CELL*3-1)),$((CELL*3-1))" \
+                 -draw "rectangle $((CELL*4)),$((CELL*2)) $((CELL*5-1)),$((CELL*3-1))" \
+                 -draw "rectangle $((CELL*6)),$((CELL*2)) $((CELL*7-1)),$((CELL*3-1))" \
+                 -draw "rectangle 0,$((CELL*4)) $((CELL-1)),$((CELL*5-1))" \
+                 -draw "rectangle $((CELL*2)),$((CELL*4)) $((CELL*3-1)),$((CELL*5-1))" \
+                 -draw "rectangle $((CELL*4)),$((CELL*4)) $((CELL*5-1)),$((CELL*5-1))" \
+                 -draw "rectangle $((CELL*6)),$((CELL*4)) $((CELL*7-1)),$((CELL*5-1))" \
+                 -draw "rectangle 0,$((CELL*6)) $((CELL-1)),$((CELL*7-1))" \
+                 -draw "rectangle $((CELL*2)),$((CELL*6)) $((CELL*3-1)),$((CELL*7-1))" \
+                 -draw "rectangle $((CELL*4)),$((CELL*6)) $((CELL*5-1)),$((CELL*7-1))" \
+                 -draw "rectangle $((CELL*6)),$((CELL*6)) $((CELL*7-1)),$((CELL*7-1))" \
+              \) -geometry +${QR_X}+${QR_Y} -composite \
+              "$OUT"
+          }
+
+          generate_icon 48  android-project/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          generate_icon 72  android-project/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          generate_icon 96  android-project/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          generate_icon 144 android-project/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
 
       - name: Make gradlew executable
         run: |
