@@ -223,7 +223,9 @@ jobs:
 
               private void ensurePlayer() {
                   if (player == null) {
-                      player = new ExoPlayer.Builder(this).build();
+                      player = new ExoPlayer.Builder(this)
+                          .setBufferDurationsMs(2000, 8000, 500, 500)
+                          .build();
                       player.setVideoTextureView(textureView);
                       player.addListener(playerListener);
                   }
