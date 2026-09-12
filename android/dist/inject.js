@@ -697,18 +697,21 @@
 
   function L(e) {
     if (i.length !== 0) {
-      var n = p + e;
-      if (n >= i.length) {
-        if (p === i.length) { n = 0; }
-        else {
-          var menuEl = document.querySelector(".menu-item");
-          if (menuEl) { p = i.length; D(p); menuEl.focus(); g(); return; }
-          n = 0;
-        }
-      } else if (n < 0) {
-        n = i.length - 1;
+      var channels = document.querySelectorAll(".ch");
+      var cur = -1;
+      for (var j = 0; j < channels.length; j++) {
+        if (parseInt(channels[j].getAttribute("data-idx")) === p) { cur = j; break; }
       }
-      y(n); x();
+      if (cur === -1) cur = 0;
+      var nxt = cur + e;
+      if (nxt >= channels.length) nxt = 0;
+      if (nxt < 0) nxt = channels.length - 1;
+      var btn = channels[nxt];
+      var idx = parseInt(btn.getAttribute("data-idx"));
+      p = idx;
+      D(idx);
+      y(idx);
+      btn.focus();
     }
   }
 
