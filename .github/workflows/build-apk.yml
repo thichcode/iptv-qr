@@ -194,6 +194,7 @@ jobs:
           import androidx.media3.common.PlaybackException;
           import androidx.media3.common.Player;
           import androidx.media3.common.util.UnstableApi;
+          import androidx.media3.exoplayer.DefaultLoadControl;
           import androidx.media3.exoplayer.ExoPlayer;
 
           import java.io.File;
@@ -258,8 +259,11 @@ jobs:
 
               private void ensurePlayer() {
                   if (player == null) {
-                      player = new ExoPlayer.Builder(this)
+                      DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
                           .setBufferDurationsMs(2000, 8000, 500, 500)
+                          .build();
+                      player = new ExoPlayer.Builder(this)
+                          .setLoadControl(loadControl)
                           .build();
                       player.setVideoSurfaceView(surfaceView);
                       player.addListener(playerListener);
