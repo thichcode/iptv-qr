@@ -31,6 +31,7 @@ jobs:
           mkdir -p android-project/app/src/main/java/com/tizenbrew/iptv
           mkdir -p android-project/app/src/main/assets
           mkdir -p android-project/app/src/main/res/values
+          mkdir -p android-project/app/src/main/res/xml
           mkdir -p android-project/app/src/main/res/mipmap-hdpi
           mkdir -p android-project/app/src/main/res/mipmap-mdpi
           mkdir -p android-project/app/src/main/res/mipmap-xhdpi
@@ -114,6 +115,15 @@ jobs:
           }
           EOF
 
+      - name: Create file_paths.xml
+        run: |
+          cat > android-project/app/src/main/res/xml/file_paths.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths>
+              <external-files-path name="apk_updates" path="." />
+          </paths>
+          EOF
+
       - name: Create AndroidManifest.xml
         run: |
           cat > android-project/app/src/main/AndroidManifest.xml << 'EOF'
@@ -122,6 +132,7 @@ jobs:
 
               <uses-permission android:name="android.permission.INTERNET" />
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
               <application
                   android:allowBackup="true"
@@ -141,6 +152,16 @@ jobs:
                           <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
                       </intent-filter>
                   </activity>
+
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
               </application>
           </manifest>
           EOF
@@ -151,9 +172,11 @@ jobs:
           package com.tizenbrew.iptv;
 
           import android.app.Activity;
+          import android.content.Intent;
           import android.graphics.Color;
           import android.net.Uri;
           import android.os.Bundle;
+          import android.view.SurfaceView;
           import android.view.View;
           import android.view.ViewGroup;
           import android.webkit.JavascriptInterface;
@@ -162,20 +185,29 @@ jobs:
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
           import android.widget.FrameLayout;
-          import android.view.TextureView;
 
           import androidx.annotation.NonNull;
+          import androidx.core.content.FileProvider;
           import androidx.media3.common.MediaItem;
           import androidx.media3.common.PlaybackException;
           import androidx.media3.common.Player;
           import androidx.media3.common.util.UnstableApi;
           import androidx.media3.exoplayer.ExoPlayer;
 
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+          import java.util.Scanner;
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+
           @UnstableApi
           public class MainActivity extends Activity {
               private WebView webView;
               private ExoPlayer player;
-              private TextureView textureView;
+              private SurfaceView surfaceView;
 
               private final Player.Listener playerListener = new Player.Listener() {
                   @Override public void onPlaybackStateChanged(int state) {
@@ -195,13 +227,13 @@ jobs:
 
                   FrameLayout root = new FrameLayout(this);
 
-                  textureView = new TextureView(this);
-                  root.addView(textureView, new FrameLayout.LayoutParams(
+                  surfaceView = new SurfaceView(this);
+                  surfaceView.getHolder().setKeepScreenOn(true);
+                  root.addView(surfaceView, new FrameLayout.LayoutParams(
                           ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
                   webView = new WebView(this);
                   webView.setBackgroundColor(Color.TRANSPARENT);
-                  webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
                   root.addView(webView, new FrameLayout.LayoutParams(
                           ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -219,6 +251,7 @@ jobs:
                   webView.addJavascriptInterface(new PlayerBridge(), "NativePlayer");
                   webView.loadUrl("file:///android_asset/index.html");
                   hideSystemUI();
+                  startUpdateCheck();
               }
 
               private void ensurePlayer() {
@@ -226,10 +259,10 @@ jobs:
                       player = new ExoPlayer.Builder(this)
                           .setBufferDurationsMs(2000, 8000, 500, 500)
                           .build();
-                      player.setVideoTextureView(textureView);
+                      player.setVideoSurfaceView(surfaceView);
                       player.addListener(playerListener);
                   }
-                  textureView.setVisibility(View.VISIBLE);
+                  surfaceView.setVisibility(View.VISIBLE);
               }
 
               private void startPlayback(String url) {
@@ -249,7 +282,7 @@ jobs:
                       player.release();
                       player = null;
                   }
-                  textureView.setVisibility(View.GONE);
+                  surfaceView.setVisibility(View.GONE);
               }
 
               private void js(String code) {
@@ -258,6 +291,106 @@ jobs:
 
               private static String esc(String s) {
                   return s == null ? "unknown" : s.replace("\\", "\\\\").replace("'", "\\'").replace("\n", " ");
+              }
+
+              private void startUpdateCheck() {
+                  new Thread(() -> {
+                      try {
+                          URL apiUrl = new URL("https://api.github.com/repos/thichcode/iptv-qr/releases/latest");
+                          HttpURLConnection conn = (HttpURLConnection) apiUrl.openConnection();
+                          conn.setRequestProperty("User-Agent", "IPTV-AndroidTV");
+                          conn.setConnectTimeout(8000);
+                          conn.setReadTimeout(8000);
+                          if (conn.getResponseCode() != 200) return;
+
+                          InputStream is = conn.getInputStream();
+                          Scanner s = new Scanner(is).useDelimiter("\\A");
+                          String resp = s.hasNext() ? s.next() : "";
+                          s.close();
+
+                          JSONObject release = new JSONObject(resp);
+                          String tagName = release.optString("tag_name", "");
+                          if (tagName.isEmpty()) return;
+
+                          String currentVersion = "";
+                          try {
+                              currentVersion = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+                          } catch (Exception ignored) {}
+
+                          if (!currentVersion.isEmpty()) {
+                              String normalizedTag = tagName.startsWith("v") ? tagName.substring(1) : tagName;
+                              String normalizedCur = currentVersion.startsWith("v") ? currentVersion.substring(1) : currentVersion;
+                              if (normalizedTag.equalsIgnoreCase(normalizedCur)) {
+                                  return;
+                              }
+                          }
+
+                          JSONArray assets = release.optJSONArray("assets");
+                          if (assets == null) return;
+                          String downloadUrl = null;
+                          for (int i = 0; i < assets.length(); i++) {
+                              JSONObject asset = assets.getJSONObject(i);
+                              String name = asset.optString("name", "");
+                              if (name.endsWith(".apk")) {
+                                  downloadUrl = asset.optString("browser_download_url", null);
+                                  break;
+                              }
+                          }
+                          if (downloadUrl == null) return;
+
+                          final String finalTag = tagName;
+                          runOnUiThread(() -> js("window._onUpdateStatus && window._onUpdateStatus('Found update " + esc(finalTag) + ", downloading...')"));
+
+                          File apkFile = new File(getExternalFilesDir(null), "update.apk");
+                          URL apkUrl = new URL(downloadUrl);
+                          HttpURLConnection dlConn = (HttpURLConnection) apkUrl.openConnection();
+                          dlConn.setRequestProperty("User-Agent", "IPTV-AndroidTV");
+                          dlConn.setInstanceFollowRedirects(true);
+                          dlConn.setConnectTimeout(15000);
+                          dlConn.setReadTimeout(30000);
+
+                          int status = dlConn.getResponseCode();
+                          if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
+                              String newUrl = dlConn.getHeaderField("Location");
+                              if (newUrl != null && !newUrl.isEmpty()) {
+                                  dlConn = (HttpURLConnection) new URL(newUrl).openConnection();
+                                  dlConn.setRequestProperty("User-Agent", "IPTV-AndroidTV");
+                              }
+                          }
+
+                          InputStream in = dlConn.getInputStream();
+                          FileOutputStream out = new FileOutputStream(apkFile);
+                          byte[] buffer = new byte[8192];
+                          int len;
+                          while ((len = in.read(buffer)) != -1) {
+                              out.write(buffer, 0, len);
+                          }
+                          out.flush();
+                          out.close();
+                          in.close();
+
+                          runOnUiThread(() -> {
+                              js("window._onUpdateStatus && window._onUpdateStatus('Update ready to install')");
+                              installApk(apkFile);
+                          });
+                      } catch (Exception e) {
+                          // Silent ignore on auto-update check failure
+                      }
+                  }).start();
+              }
+
+              private void installApk(File apkFile) {
+                  try {
+                      if (!apkFile.exists()) return;
+                      Uri apkUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", apkFile);
+                      Intent intent = new Intent(Intent.ACTION_VIEW);
+                      intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                      intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                      startActivity(intent);
+                  } catch (Exception e) {
+                      js("window._onUpdateStatus && window._onUpdateStatus('Install error: " + esc(e.getMessage()) + "')");
+                  }
               }
 
               public class PlayerBridge {
@@ -277,6 +410,7 @@ jobs:
                   @JavascriptInterface public void setSpeed(float speed) { runOnUiThread(() -> {
                       if (player != null) player.setPlaybackSpeed(speed);
                   }); }
+                  @JavascriptInterface public void checkForUpdates() { startUpdateCheck(); }
               }
 
               private void hideSystemUI() {
