@@ -4,6 +4,7 @@
   var LS = "tizenbrewIptv:playlistUrl";
   var setupCode = "";
   var setupTimer = null;
+  var channelSwitchTimer = null;
   var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, hlsInst = null, tsInst = null, nUrl = "", B = {
     13: "Enter",
     27: "Escape",
@@ -25,7 +26,7 @@
 
   function M() {
     var e = document.createElement("style");
-    e.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh}header{display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:#111;border-bottom:1px solid #333}header h1{font-size:28px;font-weight:600}#main{display:flex;flex:1;overflow:hidden}#player-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;background:#000;min-width:0}#player{width:100%;height:70vh;max-height:70vh;background:#000}#list{width:320px;background:#111;border-left:1px solid #333;overflow-y:auto;padding:8px 0}.grp{padding:8px 16px 4px;font-size:18px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:12px 16px;border:none;background:none;color:#fff;font-size:24px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:#333;outline:none}.ch.on{background:#2a2a2a;border-left:4px solid #ffd600;padding-left:12px}.ch:focus{outline:3px solid #ffd600;outline-offset:-3px}#bar{display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:#111;border-top:1px solid #333;font-size:20px}#now{color:#ffd600;font-weight:500}#st{color:#888}#list::-webkit-scrollbar{width:8px}#list::-webkit-scrollbar-track{background:#1a1a1a}#list::-webkit-scrollbar-thumb{background:#555;border-radius:4px}.menu-item{border-top:2px solid #333;margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}', document.head.appendChild(e);
+    e.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh;position:relative}header{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 100%);z-index:10}header h1{font-size:26px;font-weight:600}#cnt{font-size:18px;color:#ffd600}#main{width:100vw;height:100vh;position:relative;overflow:hidden}#player-wrap{position:absolute;inset:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:transparent;z-index:1}#player{width:100vw;height:100vh;max-height:none;background:transparent;object-fit:contain}#list{position:absolute;top:54px;bottom:54px;right:0;width:280px;background:rgba(18,18,18,0.65);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.12);overflow-y:auto;padding:8px 0;z-index:10}.grp{padding:8px 16px 4px;font-size:16px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:10px 16px;border:none;background:none;color:#fff;font-size:22px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:rgba(255,214,0,0.25);color:#ffd600;outline:2px solid #ffd600;outline-offset:-2px}.ch.on{background:rgba(255,255,255,0.1);border-left:4px solid #ffd600;padding-left:12px}#bar{position:absolute;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%);font-size:20px;z-index:10}#now{color:#ffd600;font-weight:500}#st{color:#ddd}#list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-track{background:transparent}#list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:3px}.menu-item{border-top:1px solid rgba(255,255,255,0.15);margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}', document.head.appendChild(e);
   }
 
   function U() {
@@ -642,6 +643,7 @@
   }
 
   function y(e) {
+    if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); channelSwitchTimer = null; }
     if (!(e < 0 || e >= i.length || !a)) {
       V = !0, p = e;
       var n = i[e];
@@ -710,8 +712,16 @@
       var idx = parseInt(btn.getAttribute("data-idx"));
       p = idx;
       D(idx);
-      y(idx);
       btn.focus();
+      if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); }
+      if (idx >= 0 && idx < i.length) {
+        var ch = i[idx];
+        d("Auto switch in 10s: " + ch.name);
+        channelSwitchTimer = setTimeout(function() {
+          channelSwitchTimer = null;
+          y(p);
+        }, 10000);
+      }
     }
   }
 
@@ -749,7 +759,19 @@
   function Y() {
     if (v) {
       var e = parseInt(v, 10);
-      v = "", e >= 1 && e <= i.length && (y(e - 1), x());
+      v = "";
+      if (e >= 1 && e <= i.length) {
+        p = e - 1;
+        D(p);
+        x();
+        if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); }
+        var ch = i[p];
+        d("Auto switch in 10s: " + ch.name);
+        channelSwitchTimer = setTimeout(function() {
+          channelSwitchTimer = null;
+          y(p);
+        }, 10000);
+      }
     }
   }
 
@@ -810,6 +832,7 @@
         break;
       case "Enter":
         e.preventDefault();
+        if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); channelSwitchTimer = null; }
         if (p === i.length) { resetPlaylist(); } else { y(p); }
         break;
       case " ":
@@ -862,6 +885,7 @@
   window._onNativeReady = function() { d("Playing"); };
   window._onNativeEnded = function() { d("Stream ended"); };
   window._onNativeError = function(msg) { d("Error: " + (msg || "unknown")); };
+  window._onUpdateStatus = function(msg) { d(msg || ""); };
 
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", O) : O();
 })();
