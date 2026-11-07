@@ -2,9 +2,11 @@
   var I = "";
   var W = "https://tizenbrew-iptv-setup.dvt-kisu.workers.dev";
   var LS = "tizenbrewIptv:playlistUrl";
+  var LS_LAST_CH = "tizenbrewIptv:lastChannelIdx";
   var setupCode = "";
   var setupTimer = null;
   var channelSwitchTimer = null;
+  var prevChannelIdx = -1;
   var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, hlsInst = null, tsInst = null, nUrl = "", B = {
     13: "Enter",
     27: "Escape",
@@ -26,11 +28,20 @@
 
   function M() {
     var e = document.createElement("style");
-    e.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh;position:relative}header{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 100%);z-index:10}header h1{font-size:26px;font-weight:600}#cnt{font-size:18px;color:#ffd600}#main{width:100vw;height:100vh;position:relative;overflow:hidden}#player-wrap{position:absolute;inset:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:transparent;z-index:1}#player{width:100vw;height:100vh;max-height:none;background:transparent;object-fit:contain}#list{position:absolute;top:54px;bottom:54px;right:0;width:280px;background:rgba(18,18,18,0.65);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.12);overflow-y:auto;padding:8px 0;z-index:10}.grp{padding:8px 16px 4px;font-size:16px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:10px 16px;border:none;background:none;color:#fff;font-size:22px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:rgba(255,214,0,0.25);color:#ffd600;outline:2px solid #ffd600;outline-offset:-2px}.ch.on{background:rgba(255,255,255,0.1);border-left:4px solid #ffd600;padding-left:12px}#bar{position:absolute;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%);font-size:20px;z-index:10}#now{color:#ffd600;font-weight:500}#st{color:#ddd}#list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-track{background:transparent}#list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:3px}.menu-item{border-top:1px solid rgba(255,255,255,0.15);margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}', document.head.appendChild(e);
+    e.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh;position:relative}header{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 100%);z-index:10}header h1{font-size:26px;font-weight:600}#cnt{font-size:18px;color:#ffd600}#clock{font-size:22px;font-weight:600;color:#ffd600;letter-spacing:1px;font-variant-numeric:tabular-nums}#main{width:100vw;height:100vh;position:relative;overflow:hidden}#player-wrap{position:absolute;inset:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:transparent;z-index:1}#player{width:100vw;height:100vh;max-height:none;background:transparent;object-fit:contain}#list{position:absolute;top:54px;bottom:54px;right:0;width:280px;background:rgba(18,18,18,0.65);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.12);overflow-y:auto;padding:8px 0;z-index:10}.grp{padding:8px 16px 4px;font-size:16px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:10px 16px;border:none;background:none;color:#fff;font-size:22px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:rgba(255,214,0,0.25);color:#ffd600;outline:2px solid #ffd600;outline-offset:-2px}.ch.on{background:rgba(255,255,255,0.1);border-left:4px solid #ffd600;padding-left:12px}#bar{position:absolute;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%);font-size:20px;z-index:10}#now{color:#ffd600;font-weight:500}#st{color:#ddd}#list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-track{background:transparent}#list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:3px}.menu-item{border-top:1px solid rgba(255,255,255,0.15);margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}', document.head.appendChild(e);
+  }
+
+  function updateClock() {
+    var el = document.getElementById("clock");
+    if (!el) return;
+    var now = new Date();
+    var hh = now.getHours();
+    var mm = now.getMinutes();
+    el.textContent = (hh < 10 ? "0" + hh : hh) + ":" + (mm < 10 ? "0" + mm : mm);
   }
 
   function U() {
-    M(), document.body.innerHTML = '<div id="app"><header><h1>IPTV Player</h1><span id="cnt"></span></header><div id="main"><div id="player-wrap"><video id="player" playsinline controls></video></div><aside id="list"></aside></div><footer id="bar"><span id="now">No channel selected</span><span id="st">Ready</span></footer></div>', a = document.getElementById("player"), h = document.getElementById("list"), T = document.getElementById("now"), k = document.getElementById("st");
+    M(), document.body.innerHTML = '<div id="app"><header><h1>IPTV Player</h1><div style="display:flex;align-items:center;gap:18px"><span id="cnt"></span><span id="clock">--:--</span></div></header><div id="main"><div id="player-wrap"><video id="player" playsinline controls></video></div><aside id="list"></aside></div><footer id="bar"><span id="now">No channel selected</span><span id="st">Ready</span></footer></div>', a = document.getElementById("player"), h = document.getElementById("list"), T = document.getElementById("now"), k = document.getElementById("st"), updateClock(), setInterval(updateClock, 1e4);
   }
 
   function d(e) {
@@ -552,7 +563,23 @@
           i = z(e.responseText);
           _();
           d("Ready - " + i.length + " channels");
-          i.length > 0 ? E("Select a channel") : E("No channels found");
+          if (i.length > 0) {
+            var startIdx = 0;
+            try {
+              var saved = localStorage.getItem(LS_LAST_CH);
+              if (saved !== null) {
+                var parsed = parseInt(saved, 10);
+                if (!isNaN(parsed) && parsed >= 0 && parsed < i.length) {
+                  startIdx = parsed;
+                }
+              }
+            } catch (ignore) {}
+            y(startIdx);
+            p = startIdx;
+            x();
+          } else {
+            E("No channels found");
+          }
         } else {
           d("Error: HTTP " + e.status);
         }
@@ -645,7 +672,11 @@
   function y(e) {
     if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); channelSwitchTimer = null; }
     if (!(e < 0 || e >= i.length || !a)) {
+      if (p !== e && p >= 0 && p < i.length) {
+        prevChannelIdx = p;
+      }
       V = !0, p = e;
+      try { localStorage.setItem(LS_LAST_CH, String(e)); } catch (err) {}
       var n = i[e];
       D(e), E("Now Playing: " + n.name), d("Loading stream...");
       if (typeof window.NativePlayer !== "undefined") {
@@ -760,6 +791,11 @@
     if (v) {
       var e = parseInt(v, 10);
       v = "";
+      if (e === 0 && prevChannelIdx >= 0 && prevChannelIdx < i.length) {
+        y(prevChannelIdx);
+        x();
+        return;
+      }
       if (e >= 1 && e <= i.length) {
         p = e - 1;
         D(p);
@@ -849,7 +885,15 @@
         break;
       case "Backspace":
       case "Escape":
-        e.preventDefault(), x();
+        e.preventDefault();
+        var appEl = document.getElementById("app");
+        var isFullscreen = appEl && appEl.className.indexOf("fullscreen-mode") !== -1;
+        if (isFullscreen && prevChannelIdx >= 0 && prevChannelIdx < i.length) {
+          y(prevChannelIdx);
+          x();
+        } else {
+          x();
+        }
         break;
       case "ColorF2Yellow":
         e.preventDefault(), resetPlaylist();

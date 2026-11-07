@@ -18,3 +18,9 @@ test('inject.js contains 10-second channel switch debounce logic', () => {
   assert.match(injectCode, /10000|1e4/, 'expected 10s duration for channel switch debounce');
   assert.match(injectCode, /window\._onUpdateStatus/, 'expected window._onUpdateStatus listener');
 });
+
+test('inject.js contains auto-resume, channel recall, and clock overlay', () => {
+  assert.match(injectCode, /lastChannelIdx/, 'expected lastChannelIdx for auto-resume');
+  assert.match(injectCode, /prevChannelIdx/, 'expected prevChannelIdx for channel recall');
+  assert.match(injectCode, /id="clock"/, 'expected #clock element for live clock display');
+});
