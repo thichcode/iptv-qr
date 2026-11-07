@@ -260,7 +260,8 @@ jobs:
               private void ensurePlayer() {
                   if (player == null) {
                       DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
-                          .setBufferDurationsMs(2000, 8000, 500, 500)
+                          .setBufferDurationsMs(15000, 30000, 1500, 3000)
+                          .setPrioritizeTimeOverSizeThresholds(true)
                           .build();
                       player = new ExoPlayer.Builder(this)
                           .setLoadControl(loadControl)
