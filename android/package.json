@@ -1,0 +1,32 @@
+{
+  "name": "tizenbrew-iptv",
+  "version": "0.2.1",
+  "description": "IPTV Player for TizenBrew with QR playlist setup",
+  "license": "MIT",
+  "private": false,
+  "packageType": "app",
+  "appName": "IPTV Player",
+  "appPath": "index.html",
+  "keys": [],
+  "files": [
+    "index.html",
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "pack:check": "npm pack --dry-run",
+    "publish:public": "npm publish --access public"
+  },
+  "keywords": [
+    "iptv",
+    "tizen",
+    "tizenbrew",
+    "tv",
+    "player",
+    "m3u",
+    "streaming"
+  ]
+}

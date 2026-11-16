@@ -1,0 +1,11 @@
+{
+  "name": "iptv-qr-root",
+  "version": "1.1.22",
+  "private": true,
+  "description": "Live TV on Android TV & Samsung Tizen with zero typing",
+  "scripts": {
+    "test": "node --test tests/landing.test.mjs tests/inject.test.mjs",
+    "pack:tizen": "npm --prefix android run pack:check",
+    "publish:tizen": "npm --prefix android run publish:public"
+  }
+}

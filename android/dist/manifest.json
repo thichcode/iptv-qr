@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "name": "tizenbrew-iptv",
+  "displayName": "IPTV Player",
+  "version": "0.2.1",
+  "description": "IPTV Player for TizenBrew with QR playlist setup",
+  "targetUrl": "https://localhost",
+  "assets": {
+    "scripts": [
+      "inject.js"
+    ],
+    "styles": []
+  },
+  "capabilities": {
+    "tvKeys": {
+      "arrows": true,
+      "enter": true,
+      "back": true,
+      "playPause": true
+    },
+    "performance": {
+      "removeAnimations": false,
+      "lazyMedia": false,
+      "hideComments": false,
+      "memorySaver": false
+    }
+  }
+}
