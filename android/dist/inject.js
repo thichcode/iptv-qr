@@ -1,13 +1,33 @@
 (function() {
-  var I = "";
-  var W = "https://tizenbrew-iptv-setup.dvt-kisu.workers.dev";
-  var LS = "tizenbrewIptv:playlistUrl";
-  var LS_LAST_CH = "tizenbrewIptv:lastChannelIdx";
+  "use strict";
+
+  var savedPlaylistUrl = "";
+  var SETUP_SERVICE_URL = "https://tizenbrew-iptv-setup.dvt-kisu.workers.dev";
+  var STORAGE_KEY_PLAYLIST = "tizenbrewIptv:playlistUrl";
+  var STORAGE_KEY_LAST_CHANNEL = "tizenbrewIptv:lastChannelIdx";
   var setupCode = "";
   var setupTimer = null;
   var channelSwitchTimer = null;
   var prevChannelIdx = -1;
-  var i = [], p = 0, v = "", w = null, S = 1e4, b = null, V = !1, a = null, h = null, k = null, T = null, hlsInst = null, tsInst = null, nUrl = "", B = {
+
+  var channelList = [];
+  var currentChannelIndex = 0;
+  var numberKeyBuffer = "";
+  var numberKeyTimer = null;
+  var FULLSCREEN_TIMEOUT_MS = 10000;
+  var fullscreenTimer = null;
+  var hasPlaybackStarted = false;
+
+  var videoElement = null;
+  var channelListElement = null;
+  var statusElement = null;
+  var nowPlayingElement = null;
+
+  var hlsInstance = null;
+  var mpegtsInstance = null;
+  var currentNativeUrl = "";
+
+  var TIZEN_KEY_MAP = {
     13: "Enter",
     27: "Escape",
     32: " ",
@@ -26,9 +46,10 @@
     448: "VolumeDown"
   };
 
-  function M() {
-    var e = document.createElement("style");
-    e.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh;position:relative}header{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 100%);z-index:10}header h1{font-size:26px;font-weight:600}#cnt{font-size:18px;color:#ffd600}#clock{font-size:22px;font-weight:600;color:#ffd600;letter-spacing:1px;font-variant-numeric:tabular-nums}#main{width:100vw;height:100vh;position:relative;overflow:hidden}#player-wrap{position:absolute;inset:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:transparent;z-index:1}#player{width:100vw;height:100vh;max-height:none;background:transparent;object-fit:contain}#list{position:absolute;top:54px;bottom:54px;right:0;width:280px;background:rgba(18,18,18,0.65);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.12);overflow-y:auto;padding:8px 0;z-index:10}.grp{padding:8px 16px 4px;font-size:16px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:10px 16px;border:none;background:none;color:#fff;font-size:22px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:rgba(255,214,0,0.25);color:#ffd600;outline:2px solid #ffd600;outline-offset:-2px}.ch.on{background:rgba(255,255,255,0.1);border-left:4px solid #ffd600;padding-left:12px}#bar{position:absolute;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%);font-size:20px;z-index:10}#now{color:#ffd600;font-weight:500}#st{color:#ddd}#list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-track{background:transparent}#list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:3px}.menu-item{border-top:1px solid rgba(255,255,255,0.15);margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}', document.head.appendChild(e);
+  function injectStyles() {
+    var style = document.createElement("style");
+    style.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh;position:relative}header{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 100%);z-index:10}header h1{font-size:26px;font-weight:600}#cnt{font-size:18px;color:#ffd600}#clock{font-size:22px;font-weight:600;color:#ffd600;letter-spacing:1px;font-variant-numeric:tabular-nums}#main{width:100vw;height:100vh;position:relative;overflow:hidden}#player-wrap{position:absolute;inset:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:transparent;z-index:1}#player{width:100vw;height:100vh;max-height:none;background:transparent;object-fit:contain}#list{position:absolute;top:54px;bottom:54px;right:0;width:280px;background:rgba(18,18,18,0.65);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.12);overflow-y:auto;padding:8px 0;z-index:10}.grp{padding:8px 16px 4px;font-size:16px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:10px 16px;border:none;background:none;color:#fff;font-size:22px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:rgba(255,214,0,0.25);color:#ffd600;outline:2px solid #ffd600;outline-offset:-2px}.ch.on{background:rgba(255,255,255,0.1);border-left:4px solid #ffd600;padding-left:12px}#bar{position:absolute;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%);font-size:20px;z-index:10}#now{color:#ffd600;font-weight:500}#st{color:#ddd}#list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-track{background:transparent}#list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:3px}.menu-item{border-top:1px solid rgba(255,255,255,0.15);margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}';
+    document.head.appendChild(style);
   }
 
   function updateClock() {
@@ -40,41 +61,82 @@
     el.textContent = (hh < 10 ? "0" + hh : hh) + ":" + (mm < 10 ? "0" + mm : mm);
   }
 
-  function U() {
-    M(), document.body.innerHTML = '<div id="app"><header><h1>IPTV Player</h1><div style="display:flex;align-items:center;gap:18px"><span id="cnt"></span><span id="clock">--:--</span></div></header><div id="main"><div id="player-wrap"><video id="player" playsinline controls></video></div><aside id="list"></aside></div><footer id="bar"><span id="now">No channel selected</span><span id="st">Ready</span></footer></div>', a = document.getElementById("player"), h = document.getElementById("list"), T = document.getElementById("now"), k = document.getElementById("st"), updateClock(), setInterval(updateClock, 1e4);
+  function renderAppLayout() {
+    injectStyles();
+    document.body.innerHTML = '<div id="app">' +
+      '<header>' +
+        '<h1>IPTV Player</h1>' +
+        '<div style="display:flex;align-items:center;gap:18px">' +
+          '<span id="cnt"></span>' +
+          '<span id="clock">--:--</span>' +
+        '</div>' +
+      '</header>' +
+      '<div id="main">' +
+        '<div id="player-wrap"><video id="player" playsinline controls></video></div>' +
+        '<aside id="list"></aside>' +
+      '</div>' +
+      '<footer id="bar">' +
+        '<span id="now">No channel selected</span>' +
+        '<span id="st">Ready</span>' +
+      '</footer>' +
+    '</div>';
+
+    videoElement = document.getElementById("player");
+    channelListElement = document.getElementById("list");
+    nowPlayingElement = document.getElementById("now");
+    statusElement = document.getElementById("st");
+
+    updateClock();
+    setInterval(updateClock, 10000);
   }
 
-  function d(e) {
-    k && (k.textContent = e);
+  function setStatus(text) {
+    if (statusElement) {
+      statusElement.textContent = text;
+    }
   }
 
-  function E(e) {
-    T && (T.textContent = e);
+  function setNowPlaying(text) {
+    if (nowPlayingElement) {
+      nowPlayingElement.textContent = text;
+    }
   }
 
-  function H() {
-    var e = document.getElementById("app");
-    e && (e.className = "fullscreen-mode");
+  function enterFullscreen() {
+    var app = document.getElementById("app");
+    if (app) {
+      app.className = "fullscreen-mode";
+    }
   }
 
-  function F() {
-    var e = document.getElementById("app");
-    e && (e.className = "");
+  function exitFullscreen() {
+    var app = document.getElementById("app");
+    if (app) {
+      app.className = "";
+    }
   }
 
-  function g() {
-    b && clearTimeout(b), F(), V && (b = setTimeout(H, S));
+  function resetFullscreenTimer() {
+    if (fullscreenTimer) {
+      clearTimeout(fullscreenTimer);
+    }
+    exitFullscreen();
+    if (hasPlaybackStarted) {
+      fullscreenTimer = setTimeout(enterFullscreen, FULLSCREEN_TIMEOUT_MS);
+    }
   }
 
   function makeSetupCode() {
     var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     var code = "";
-    for (var idx = 0; idx < 6; idx++) code += chars[Math.floor(Math.random() * chars.length)];
+    for (var idx = 0; idx < 6; idx++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
     return code;
   }
 
   function setupUrl(code) {
-    return W + "/setup?code=" + encodeURIComponent(code);
+    return SETUP_SERVICE_URL + "/setup?code=" + encodeURIComponent(code);
   }
 
   function xhrGetText(url, done) {
@@ -84,25 +146,44 @@
       if (req.readyState !== 4) return;
       done(null, req.status, req.responseText);
     };
-    req.onerror = function() { done(new Error("Network failed"), 0, ""); };
-    try { req.send(); } catch (e) { done(e, 0, ""); }
+    req.onerror = function() {
+      done(new Error("Network failed"), 0, "");
+    };
+    try {
+      req.send();
+    } catch (e) {
+      done(e, 0, "");
+    }
   }
 
   function savePlaylistUrl(url) {
-    I = url;
-    try { localStorage.setItem(LS, url); } catch (err) {}
+    savedPlaylistUrl = url;
+    try {
+      localStorage.setItem(STORAGE_KEY_PLAYLIST, url);
+    } catch (err) {}
   }
 
   function clearSetupTimer() {
-    if (setupTimer) clearInterval(setupTimer);
-    setupTimer = null;
+    if (setupTimer) {
+      clearInterval(setupTimer);
+      setupTimer = null;
+    }
   }
 
-  var QR_CODE_CAPACITY = [[17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34],[106,84,60,44],[134,106,74,58],[154,122,86,64],[192,152,108,84],[230,180,130,98],[271,213,151,119],[321,251,177,137],[367,287,203,155],[425,331,241,177],[458,362,258,194],[520,412,292,220],[586,450,322,250],[644,504,364,280],[718,560,394,310],[792,624,442,338],[858,666,482,382],[929,711,509,403],[1003,779,565,439],[1091,857,611,461],[1171,911,661,511],[1273,997,715,535],[1367,1059,751,593],[1465,1125,805,625],[1528,1190,868,658],[1628,1264,908,698],[1732,1370,982,742],[1840,1452,1030,790],[1952,1538,1112,842],[2068,1628,1168,898],[2188,1722,1228,958],[2303,1809,1283,983],[2431,1911,1351,1051],[2563,1989,1423,1093],[2699,2099,1499,1139],[2809,2213,1579,1219],[2953,2331,1663,1273]];
+  var QR_CODE_CAPACITY = [
+    [17,14,11,7],[32,26,20,14],[53,42,32,24],[78,62,46,34],[106,84,60,44],
+    [134,106,74,58],[154,122,86,64],[192,152,108,84],[230,180,130,98],[271,213,151,119],
+    [321,251,177,137],[367,287,203,155],[425,331,241,177],[458,362,258,194],[520,412,292,220],
+    [586,450,322,250],[644,504,364,280],[718,560,394,310],[792,624,442,338],[858,666,482,382],
+    [929,711,509,403],[1003,779,565,439],[1091,857,611,461],[1171,911,661,511],[1273,997,715,535],
+    [1367,1059,751,593],[1465,1125,805,625],[1528,1190,868,658],[1628,1264,908,698],[1732,1370,982,742],
+    [1840,1452,1030,790],[1952,1538,1112,842],[2068,1628,1168,898],[2188,1722,1228,958],[2303,1809,1283,983],
+    [2431,1911,1351,1051],[2563,1989,1423,1093],[2699,2099,1499,1139],[2809,2213,1579,1219],[2953,2331,1663,1273]
+  ];
 
   function QRMaxChars(text, level) {
-    var b = encodeURI(text).toString().replace(/%[0-9a-fA-F]{2}/g, "a");
-    var len = b.length + (b.length !== text.length ? 3 : 0);
+    var encoded = encodeURI(text).toString().replace(/%[0-9a-fA-F]{2}/g, "a");
+    var len = encoded.length + (encoded.length !== text.length ? 3 : 0);
     for (var v = 0; v < QR_CODE_CAPACITY.length; v++) {
       var cap = 0;
       switch (level) {
@@ -120,7 +201,6 @@
     if (typeof el === "string") el = document.getElementById(el);
     var opt = options || {};
     var width = opt.width || 220;
-    var height = opt.height || 220;
     var text = opt.text || "";
     var correctLevel = opt.correctLevel || QRCode.CorrectLevel.H;
     var typeNumber = opt.typeNumber || QRMaxChars(text, correctLevel);
@@ -159,9 +239,15 @@
   }
 
   QRCodeModel.prototype = {
-    addData: function(data) { var d = new QR8bitByte(data); this.dataList.push(d); this.dataCache = null; },
+    addData: function(data) {
+      var d = new QR8bitByte(data);
+      this.dataList.push(d);
+      this.dataCache = null;
+    },
     isDark: function(row, col) {
-      if (row < 0 || this.moduleCount <= row || col < 0 || this.moduleCount <= col) throw new Error(row + "," + col);
+      if (row < 0 || this.moduleCount <= row || col < 0 || this.moduleCount <= col) {
+        throw new Error(row + "," + col);
+      }
       return this.modules[row][col];
     },
     getModuleCount: function() { return this.moduleCount; },
@@ -169,7 +255,12 @@
     makeImpl: function(test, maskPattern) {
       this.moduleCount = this.typeNumber * 4 + 17;
       this.modules = new Array(this.moduleCount);
-      for (var r = 0; r < this.moduleCount; r++) { this.modules[r] = new Array(this.moduleCount); for (var c = 0; c < this.moduleCount; c++) this.modules[r][c] = null; }
+      for (var r = 0; r < this.moduleCount; r++) {
+        this.modules[r] = new Array(this.moduleCount);
+        for (var c = 0; c < this.moduleCount; c++) {
+          this.modules[r][c] = null;
+        }
+      }
       this.setupPositionProbePattern(0, 0);
       this.setupPositionProbePattern(this.moduleCount - 7, 0);
       this.setupPositionProbePattern(0, this.moduleCount - 7);
@@ -177,7 +268,9 @@
       this.setupTimingPattern();
       this.setupTypeInfo(test, maskPattern);
       if (this.typeNumber >= 7) this.setupTypeNumber(test);
-      if (this.dataCache == null) this.dataCache = QRCodeModel.createData(this.typeNumber, this.errorCorrectLevel, this.dataList);
+      if (this.dataCache == null) {
+        this.dataCache = QRCodeModel.createData(this.typeNumber, this.errorCorrectLevel, this.dataList);
+      }
       this.mapData(this.dataCache, maskPattern);
     },
     setupPositionProbePattern: function(row, col) {
@@ -185,7 +278,9 @@
         if (row + r <= -1 || this.moduleCount <= row + r) continue;
         for (var c = -1; c <= 7; c++) {
           if (col + c <= -1 || this.moduleCount <= col + c) continue;
-          this.modules[row + r][col + c] = (r >= 0 && r <= 6 && (c === 0 || c === 6)) || (c >= 0 && c <= 6 && (r === 0 || r === 6)) || (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+          this.modules[row + r][col + c] = (r >= 0 && r <= 6 && (c === 0 || c === 6)) ||
+            (c >= 0 && c <= 6 && (r === 0 || r === 6)) ||
+            (r >= 2 && r <= 4 && c >= 2 && c <= 4);
         }
       }
     },
@@ -199,8 +294,12 @@
       return bestMask;
     },
     setupTimingPattern: function() {
-      for (var r = 8; r < this.moduleCount - 8; r++) { if (this.modules[r][6] == null) this.modules[r][6] = r % 2 === 0; }
-      for (var c = 8; c < this.moduleCount - 8; c++) { if (this.modules[6][c] == null) this.modules[6][c] = c % 2 === 0; }
+      for (var r = 8; r < this.moduleCount - 8; r++) {
+        if (this.modules[r][6] == null) this.modules[r][6] = r % 2 === 0;
+      }
+      for (var c = 8; c < this.moduleCount - 8; c++) {
+        if (this.modules[6][c] == null) this.modules[6][c] = c % 2 === 0;
+      }
     },
     setupPositionAdjustPattern: function() {
       var pos = QRUtil.getPatternPosition(this.typeNumber);
@@ -224,8 +323,8 @@
         this.modules[Math.floor(i / 3)][i % 3 + this.moduleCount - 8 - 3] = mod;
       }
       for (i = 0; i < 18; i++) {
-        var mod = !test && ((bits >> i) & 1) === 1;
-        this.modules[i % 3 + this.moduleCount - 8 - 3][Math.floor(i / 3)] = mod;
+        var mod2 = !test && ((bits >> i) & 1) === 1;
+        this.modules[i % 3 + this.moduleCount - 8 - 3][Math.floor(i / 3)] = mod2;
       }
     },
     setupTypeInfo: function(test, maskPattern) {
@@ -238,10 +337,10 @@
         else this.modules[this.moduleCount - 15 + i][8] = mod;
       }
       for (i = 0; i < 15; i++) {
-        var mod = !test && ((bits >> i) & 1) === 1;
-        if (i < 8) this.modules[8][this.moduleCount - i - 1] = mod;
-        else if (i < 9) this.modules[8][15 - i - 1 + 1] = mod;
-        else this.modules[8][15 - i - 1] = mod;
+        var mod2 = !test && ((bits >> i) & 1) === 1;
+        if (i < 8) this.modules[8][this.moduleCount - i - 1] = mod2;
+        else if (i < 9) this.modules[8][15 - i - 1 + 1] = mod2;
+        else this.modules[8][15 - i - 1] = mod2;
       }
       this.modules[this.moduleCount - 8][8] = !test;
     },
@@ -261,7 +360,11 @@
             }
           }
           row += inc;
-          if (row < 0 || this.moduleCount <= row) { row -= inc; inc = -inc; break; }
+          if (row < 0 || this.moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
         }
       }
     }
@@ -281,7 +384,9 @@
     }
     var totalDataCount = 0;
     for (i = 0; i < rsBlocks.length; i++) totalDataCount += rsBlocks[i].dataCount;
-    if (buffer.getLengthInBits() > totalDataCount * 8) throw new Error("code length overflow: " + buffer.getLengthInBits() + " > " + totalDataCount * 8);
+    if (buffer.getLengthInBits() > totalDataCount * 8) {
+      throw new Error("code length overflow: " + buffer.getLengthInBits() + " > " + totalDataCount * 8);
+    }
     if (buffer.getLengthInBits() + 4 <= totalDataCount * 8) buffer.put(0, 4);
     while (buffer.getLengthInBits() % 8 !== 0) buffer.putBit(false);
     while (true) {
@@ -317,10 +422,14 @@
     for (r = 0; r < rsBlocks.length; r++) totalCount += rsBlocks[r].totalCount;
     var data = new Array(totalCount), index = 0;
     for (i = 0; i < maxDcCount; i++) {
-      for (r = 0; r < rsBlocks.length; r++) { if (i < dcdata[r].length) data[index++] = dcdata[r][i]; }
+      for (r = 0; r < rsBlocks.length; r++) {
+        if (i < dcdata[r].length) data[index++] = dcdata[r][i];
+      }
     }
     for (i = 0; i < maxEcCount; i++) {
-      for (r = 0; r < rsBlocks.length; r++) { if (i < ecdata[r].length) data[index++] = ecdata[r][i]; }
+      for (r = 0; r < rsBlocks.length; r++) {
+        if (i < ecdata[r].length) data[index++] = ecdata[r][i];
+      }
     }
     return data;
   };
@@ -350,14 +459,19 @@
       for (var j = 0; j < byteData.length; j++) this.parsedData.push(byteData[j]);
       byteData = [];
     }
-    this.parsedData.length !== data.length && (this.parsedData.unshift(191), this.parsedData.unshift(187), this.parsedData.unshift(239));
+    if (this.parsedData.length !== data.length) {
+      this.parsedData.unshift(191);
+      this.parsedData.unshift(187);
+      this.parsedData.unshift(239);
+    }
   }
 
   QR8bitByte.MODE_8BIT_BYTE = 4;
-
   QR8bitByte.prototype = {
     getLength: function() { return this.parsedData.length; },
-    write: function(buffer) { for (var i = 0; i < this.parsedData.length; i++) buffer.put(this.parsedData[i], 8); }
+    write: function(buffer) {
+      for (var i = 0; i < this.parsedData.length; i++) buffer.put(this.parsedData[i], 8);
+    }
   };
 
   function QRPolynomial(num, shift) {
@@ -398,10 +512,13 @@
   };
 
   for (var _i = 0; _i < 8; _i++) QRMath.EXP_TABLE[_i] = 1 << _i;
-  for (var _i = 8; _i < 256; _i++) QRMath.EXP_TABLE[_i] = QRMath.EXP_TABLE[_i - 4] ^ QRMath.EXP_TABLE[_i - 5] ^ QRMath.EXP_TABLE[_i - 6] ^ QRMath.EXP_TABLE[_i - 8];
-  for (var _i = 0; _i < 255; _i++) QRMath.LOG_TABLE[QRMath.EXP_TABLE[_i]] = _i;
+  for (var _i2 = 8; _i2 < 256; _i2++) QRMath.EXP_TABLE[_i2] = QRMath.EXP_TABLE[_i2 - 4] ^ QRMath.EXP_TABLE[_i2 - 5] ^ QRMath.EXP_TABLE[_i2 - 6] ^ QRMath.EXP_TABLE[_i2 - 8];
+  for (var _i3 = 0; _i3 < 255; _i3++) QRMath.LOG_TABLE[QRMath.EXP_TABLE[_i3]] = _i3;
 
-  function QRRSBlock(totalCount, dataCount) { this.totalCount = totalCount; this.dataCount = dataCount; }
+  function QRRSBlock(totalCount, dataCount) {
+    this.totalCount = totalCount;
+    this.dataCount = dataCount;
+  }
 
   QRRSBlock.RS_BLOCK_TABLE = [
     [1,26,19],[1,26,16],[1,26,13],[1,26,9],[1,44,34],[1,44,28],[1,44,22],[1,44,16],
@@ -453,16 +570,26 @@
     G15: 1335, G18: 7973, G15_MASK: 21522,
     getBCHTypeInfo: function(data) {
       var d = data << 10;
-      while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15) >= 0) d ^= QRUtil.G15 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15));
+      while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15) >= 0) {
+        d ^= QRUtil.G15 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G15));
+      }
       return (data << 10 | d) ^ QRUtil.G15_MASK;
     },
     getBCHTypeNumber: function(data) {
       var d = data << 12;
-      while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18) >= 0) d ^= QRUtil.G18 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18));
+      while (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18) >= 0) {
+        d ^= QRUtil.G18 << (QRUtil.getBCHDigit(d) - QRUtil.getBCHDigit(QRUtil.G18));
+      }
       return data << 12 | d;
     },
-    getBCHDigit: function(data) { var digit = 0; while (data !== 0) { digit++; data >>>= 1; } return digit; },
-    getPatternPosition: function(typeNumber) { return QRUtil.PATTERN_POSITION_TABLE[typeNumber - 1]; },
+    getBCHDigit: function(data) {
+      var digit = 0;
+      while (data !== 0) { digit++; data >>>= 1; }
+      return digit;
+    },
+    getPatternPosition: function(typeNumber) {
+      return QRUtil.PATTERN_POSITION_TABLE[typeNumber - 1];
+    },
     getMask: function(maskPattern, i, j) {
       switch (maskPattern) {
         case 0: return (i + j) % 2 === 0;
@@ -478,7 +605,9 @@
     },
     getErrorCorrectPolynomial: function(errorCorrectLength) {
       var a = new QRPolynomial([1], 0);
-      for (var i = 0; i < errorCorrectLength; i++) a = a.multiply(new QRPolynomial([1, QRMath.gexp(i)], 0));
+      for (var i = 0; i < errorCorrectLength; i++) {
+        a = a.multiply(new QRPolynomial([1, QRMath.gexp(i)], 0));
+      }
       return a;
     },
     getLengthInBits: function(mode, type) {
@@ -529,7 +658,11 @@
         }
       }
       var darkCount = 0;
-      for (col = 0; col < moduleCount; col++) { for (row = 0; row < moduleCount; row++) { if (qrCode.isDark(row, col)) darkCount++; } }
+      for (col = 0; col < moduleCount; col++) {
+        for (row = 0; row < moduleCount; row++) {
+          if (qrCode.isDark(row, col)) darkCount++;
+        }
+      }
       lostPoint += Math.abs(100 * darkCount / moduleCount / moduleCount - 50) / 5 * 10;
       return lostPoint;
     }
@@ -541,8 +674,15 @@
   }
 
   QRBitBuffer.prototype = {
-    get: function(index) { var bufIndex = Math.floor(index / 8); return ((this.buffer[bufIndex] >>> (7 - index % 8)) & 1) === 1; },
-    put: function(num, length) { for (var i = 0; i < length; i++) this.putBit(((num >>> (length - i - 1)) & 1) === 1); },
+    get: function(index) {
+      var bufIndex = Math.floor(index / 8);
+      return ((this.buffer[bufIndex] >>> (7 - index % 8)) & 1) === 1;
+    },
+    put: function(num, length) {
+      for (var i = 0; i < length; i++) {
+        this.putBit(((num >>> (length - i - 1)) & 1) === 1);
+      }
+    },
     getLengthInBits: function() { return this.length; },
     putBit: function(bit) {
       var bufIndex = Math.floor(this.length / 8);
@@ -552,275 +692,448 @@
     }
   };
 
-  function K() {
-    if (!I) { showSetup(); return; }
-    d("Fetching playlist...");
-    var e = new XMLHttpRequest();
-    e.open("GET", I, true);
-    e.onreadystatechange = function() {
-      if (e.readyState === 4) {
-        if (e.status >= 200 && e.status < 300) {
-          i = z(e.responseText);
-          _();
-          d("Ready - " + i.length + " channels");
-          if (i.length > 0) {
+  function fetchPlaylist() {
+    if (!savedPlaylistUrl) {
+      showSetup();
+      return;
+    }
+    setStatus("Fetching playlist...");
+    var req = new XMLHttpRequest();
+    req.open("GET", savedPlaylistUrl, true);
+    req.onreadystatechange = function() {
+      if (req.readyState === 4) {
+        if (req.status >= 200 && req.status < 300) {
+          channelList = parseM3U(req.responseText);
+          renderChannelList();
+          setStatus("Ready - " + channelList.length + " channels");
+          if (channelList.length > 0) {
             var startIdx = 0;
             try {
-              var saved = localStorage.getItem(LS_LAST_CH);
+              var saved = localStorage.getItem(STORAGE_KEY_LAST_CHANNEL);
               if (saved !== null) {
                 var parsed = parseInt(saved, 10);
-                if (!isNaN(parsed) && parsed >= 0 && parsed < i.length) {
+                if (!isNaN(parsed) && parsed >= 0 && parsed < channelList.length) {
                   startIdx = parsed;
                 }
               }
             } catch (ignore) {}
-            y(startIdx);
-            p = startIdx;
-            x();
+            playChannel(startIdx);
+            currentChannelIndex = startIdx;
+            focusCurrentChannel();
           } else {
-            E("No channels found");
+            setNowPlaying("No channels found");
           }
         } else {
-          d("Error: HTTP " + e.status);
+          setStatus("Error: HTTP " + req.status);
         }
       }
     };
-    e.onerror = function() { d("Error: Network failed"); };
-    try { e.send(); } catch (err) { d("Error: " + (err.message || "send failed")); }
+    req.onerror = function() { setStatus("Error: Network failed"); };
+    try {
+      req.send();
+    } catch (err) {
+      setStatus("Error: " + (err.message || "send failed"));
+    }
   }
 
-  function z(e) {
-    for (var n = e.split(/\r?\n/), t = [], r = 0, o = 0; o < n.length; o++) {
-      var c = n[o].trim();
-      if (c.indexOf("#EXTINF:") === 0) {
-        var u = c.match(/#EXTINF:-?\d+[^,]*,(.*)/);
-        if (u) {
-          for (var s = u[1].trim(), l = c.match(/group-title="([^"]*)"/), m = c.match(/tvg-logo="([^"]*)"/), f = 1; n[o + f] && n[o + f].trim().indexOf("#") === 0; ) f++;
-          var C = n[o + f] ? n[o + f].trim() : "";
-          C && C.indexOf("#") !== 0 && (t.push({
-            name: s,
-            url: C,
-            group: l ? l[1] : N(s),
-            logo: m ? m[1] : "",
-            index: r
-          }), r++, o += f);
+  function parseM3U(content) {
+    var lines = content.split(/\r?\n/);
+    var channels = [];
+    var channelIdx = 0;
+    for (var o = 0; o < lines.length; o++) {
+      var line = lines[o].trim();
+      if (line.indexOf("#EXTINF:") === 0) {
+        var match = line.match(/#EXTINF:-?\d+[^,]*,(.*)/);
+        if (match) {
+          var name = match[1].trim();
+          var groupMatch = line.match(/group-title="([^"]*)"/);
+          var logoMatch = line.match(/tvg-logo="([^"]*)"/);
+          var forwardOffset = 1;
+          while (lines[o + forwardOffset] && lines[o + forwardOffset].trim().indexOf("#") === 0) {
+            forwardOffset++;
+          }
+          var streamUrl = lines[o + forwardOffset] ? lines[o + forwardOffset].trim() : "";
+          if (streamUrl && streamUrl.indexOf("#") !== 0) {
+            channels.push({
+              name: name,
+              url: streamUrl,
+              group: groupMatch ? groupMatch[1] : detectGroup(name),
+              logo: logoMatch ? logoMatch[1] : "",
+              index: channelIdx
+            });
+            channelIdx++;
+            o += forwardOffset;
+          }
         }
       }
     }
-    return t;
+    return channels;
   }
 
-  function N(e) {
-    var n = e.toUpperCase();
-    return n.indexOf("VTV") === 0 ? "VTV" : n.indexOf("HTVC") === 0 ? "HTVC" : n.indexOf("HTV") === 0 ? "HTV" : n.indexOf("SCTV") === 0 ? "SCTV" : n.indexOf("THVL") === 0 ? "THVL" : n.indexOf("BTV") === 0 ? "BTV" : n.indexOf("KTV") === 0 ? "KTV" : n.indexOf("NTV") === 0 ? "NTV" : n.indexOf("BBC") === 0 ? "BBC" : n.indexOf("K+") === 0 ? "K+" : n.indexOf("CNN") === 0 ? "CNN" : "Other";
+  function detectGroup(name) {
+    var upper = name.toUpperCase();
+    if (upper.indexOf("VTV") === 0) return "VTV";
+    if (upper.indexOf("HTVC") === 0) return "HTVC";
+    if (upper.indexOf("HTV") === 0) return "HTV";
+    if (upper.indexOf("SCTV") === 0) return "SCTV";
+    if (upper.indexOf("THVL") === 0) return "THVL";
+    if (upper.indexOf("BTV") === 0) return "BTV";
+    if (upper.indexOf("KTV") === 0) return "KTV";
+    if (upper.indexOf("NTV") === 0) return "NTV";
+    if (upper.indexOf("BBC") === 0) return "BBC";
+    if (upper.indexOf("K+") === 0) return "K+";
+    if (upper.indexOf("CNN") === 0) return "CNN";
+    return "Other";
   }
 
-  function R(e) {
-    for (var n = {}, t = 0; t < e.length; t++) {
-      var r = e[t].group || N(e[t].name);
-      n[r] || (n[r] = []), n[r].push(e[t]);
-    }
-    return n;
-  }
-
-  function _() {
-    if (h) {
-      h.innerHTML = "";
-      for (var e = R(i), n = 0, t = Object.keys(e).sort(), r = 0; r < t.length; r++) {
-        var o = t[r], c = document.createElement("div");
-        c.className = "grp", c.textContent = o, h.appendChild(c);
-        for (var u = 0; u < e[o].length; u++) {
-          var s = e[o][u], l = document.createElement("button");
-          l.className = "ch", l.textContent = n + 1 + ". " + s.name, l.setAttribute("data-idx", String(s.index)), l.onclick = j(s.index), l.onfocus = q(s.index), h.appendChild(l), n++;
-        }
+  function groupChannels(channels) {
+    var groups = {};
+    for (var t = 0; t < channels.length; t++) {
+      var grpName = channels[t].group || detectGroup(channels[t].name);
+      if (!groups[grpName]) {
+        groups[grpName] = [];
       }
-      var menuItem = document.createElement("button");
-      menuItem.className = "ch menu-item", menuItem.textContent = "Change playlist", menuItem.setAttribute("data-idx", String(i.length)), menuItem.onclick = resetPlaylist, menuItem.onfocus = function() { p = i.length; D(i.length); }, h.appendChild(menuItem);
-      var m = document.getElementById("cnt");
-      m && (m.textContent = i.length + " channels"), x();
+      groups[grpName].push(channels[t]);
     }
+    return groups;
   }
 
-  function j(e) { return function() { y(e); }; }
-  function q(e) { return function() { p = e; D(e); }; }
+  function renderChannelList() {
+    if (!channelListElement) return;
+    channelListElement.innerHTML = "";
+    var groups = groupChannels(channelList);
+    var displayNum = 0;
+    var groupKeys = Object.keys(groups).sort();
+    for (var r = 0; r < groupKeys.length; r++) {
+      var grpTitle = groupKeys[r];
+      var headerDiv = document.createElement("div");
+      headerDiv.className = "grp";
+      headerDiv.textContent = grpTitle;
+      channelListElement.appendChild(headerDiv);
 
-  function D(e) {
-    for (var n = document.querySelectorAll(".ch"), t = 0; t < n.length; t++) {
-      var r = n[t], o = parseInt(r.getAttribute("data-idx") || "-1", 10);
-      o === e ? (r.className = "ch on", r.scrollIntoView(!1)) : r.className = "ch";
+      var items = groups[grpTitle];
+      for (var u = 0; u < items.length; u++) {
+        var ch = items[u];
+        var btn = document.createElement("button");
+        btn.className = "ch";
+        btn.textContent = (displayNum + 1) + ". " + ch.name;
+        btn.setAttribute("data-idx", String(ch.index));
+        btn.onclick = handleChannelClick(ch.index);
+        btn.onfocus = handleChannelFocus(ch.index);
+        channelListElement.appendChild(btn);
+        displayNum++;
+      }
+    }
+
+    var menuItem = document.createElement("button");
+    menuItem.className = "ch menu-item";
+    menuItem.textContent = "Change playlist";
+    menuItem.setAttribute("data-idx", String(channelList.length));
+    menuItem.onclick = resetPlaylist;
+    menuItem.onfocus = function() {
+      currentChannelIndex = channelList.length;
+      highlightChannel(channelList.length);
+    };
+    channelListElement.appendChild(menuItem);
+
+    var countEl = document.getElementById("cnt");
+    if (countEl) {
+      countEl.textContent = channelList.length + " channels";
+    }
+    focusCurrentChannel();
+  }
+
+  function handleChannelClick(index) {
+    return function() {
+      playChannel(index);
+    };
+  }
+
+  function handleChannelFocus(index) {
+    return function() {
+      currentChannelIndex = index;
+      highlightChannel(index);
+    };
+  }
+
+  function highlightChannel(index) {
+    var buttons = document.querySelectorAll(".ch");
+    for (var t = 0; t < buttons.length; t++) {
+      var btn = buttons[t];
+      var itemIdx = parseInt(btn.getAttribute("data-idx") || "-1", 10);
+      if (itemIdx === index) {
+        btn.className = "ch on";
+        btn.scrollIntoView(false);
+      } else {
+        btn.className = "ch";
+      }
     }
   }
 
   function stopPlayback() {
-    if (typeof window.NativePlayer !== "undefined") { window.NativePlayer.stop(); nUrl = ""; }
-    if (hlsInst) { hlsInst.destroy(); hlsInst = null; }
-    if (tsInst) { tsInst.destroy(); tsInst = null; }
-    if (a) { a.removeAttribute("src"); a.load(); }
+    if (typeof window.NativePlayer !== "undefined") {
+      window.NativePlayer.stop();
+      currentNativeUrl = "";
+    }
+    if (hlsInstance) {
+      hlsInstance.destroy();
+      hlsInstance = null;
+    }
+    if (mpegtsInstance) {
+      mpegtsInstance.destroy();
+      mpegtsInstance = null;
+    }
+    if (videoElement) {
+      videoElement.removeAttribute("src");
+      videoElement.load();
+    }
   }
 
   function tryNativePlayback(url) {
-    a.src = url;
-    a.onerror = function() {
-      var r = a.error;
-      d("Error: " + (r ? r.message || "code " + r.code : "unknown"));
+    videoElement.src = url;
+    videoElement.onerror = function() {
+      var err = videoElement.error;
+      setStatus("Error: " + (err ? err.message || "code " + err.code : "unknown"));
     };
-    a.oncanplay = function() { d("Playing"); };
-    var t = a.play();
-    t && t["catch"] && t["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
-  }
-
-  function y(e) {
-    if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); channelSwitchTimer = null; }
-    if (!(e < 0 || e >= i.length || !a)) {
-      if (p !== e && p >= 0 && p < i.length) {
-        prevChannelIdx = p;
-      }
-      V = !0, p = e;
-      try { localStorage.setItem(LS_LAST_CH, String(e)); } catch (err) {}
-      var n = i[e];
-      D(e), E("Now Playing: " + n.name), d("Loading stream...");
-      if (typeof window.NativePlayer !== "undefined") {
-        nUrl = n.url;
-        document.body.style.background = "transparent";
-        var pw = document.getElementById("player-wrap");
-        if (pw) pw.style.background = "transparent";
-        var app = document.getElementById("app");
-        if (app) app.style.background = "transparent";
-        a.style.background = "transparent";
-        a.style.opacity = "0";
-        a.controls = !1;
-        window.NativePlayer.play(n.url);
-      } else {
-        stopPlayback();
-        if (typeof Hls !== "undefined" && /\.m3u8/i.test(n.url)) {
-          hlsInst = new Hls();
-          hlsInst.loadSource(n.url);
-          hlsInst.attachMedia(a);
-          hlsInst.on(Hls.Events.MANIFEST_PARSED, function() {
-            a.play()["catch"](function(r) { d("Error: " + (r && r.message ? r.message : "play failed")); });
-            d("Playing");
-          });
-          hlsInst.on(Hls.Events.ERROR, function(e, data) {
-            if (data.fatal) { d("HLS error"); hlsInst.destroy(); hlsInst = null; }
-          });
-        } else if (typeof mpegts !== "undefined" && !/\.mp4/i.test(n.url)) {
-          try {
-            tsInst = new mpegts.Player({ type: "mpegts", url: n.url, isLive: !0 }, { enableWorker: !1, lazyLoad: !0, liveBufferLatency: 3 });
-            tsInst.attachMediaElement(a);
-            tsInst.load();
-            var started = !1;
-            function onPlayReady() {
-              if (!started) { started = !0; a.play()["catch"](function(r) { d("Error: " + (r.message || "play failed")); }); d("Playing"); }
-            }
-            a.addEventListener("canplay", onPlayReady, { once: !0 });
-            a.addEventListener("playing", onPlayReady, { once: !0 });
-            var tsTimer = setTimeout(function() { onPlayReady(); }, 3e3);
-            tsInst.on(mpegts.Events.ERROR, function(e, data) { d("Stream error: " + (data || "unknown")); tsInst.destroy(); tsInst = null; clearTimeout(tsTimer); });
-            tsInst.on(mpegts.Events.RECOVERED_EARLY_EOF, onPlayReady);
-          } catch (r) {
-            tryNativePlayback(n.url);
-          }
-        } else {
-          tryNativePlayback(n.url);
-        }
-      }
-      g();
+    videoElement.oncanplay = function() {
+      setStatus("Playing");
+    };
+    var playPromise = videoElement.play();
+    if (playPromise && playPromise["catch"]) {
+      playPromise["catch"](function(err) {
+        setStatus("Error: " + (err && err.message ? err.message : "play failed"));
+      });
     }
   }
 
-  function L(e) {
-    if (i.length !== 0) {
-      var channels = document.querySelectorAll(".ch");
-      var cur = -1;
-      for (var j = 0; j < channels.length; j++) {
-        if (parseInt(channels[j].getAttribute("data-idx")) === p) { cur = j; break; }
-      }
-      if (cur === -1) cur = 0;
-      var nxt = cur + e;
-      if (nxt >= channels.length) nxt = 0;
-      if (nxt < 0) nxt = channels.length - 1;
-      var btn = channels[nxt];
-      var idx = parseInt(btn.getAttribute("data-idx"));
-      p = idx;
-      D(idx);
-      btn.focus();
-      if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); }
-      if (idx >= 0 && idx < i.length) {
-        var ch = i[idx];
-        d("Auto switch in 10s: " + ch.name);
-        channelSwitchTimer = setTimeout(function() {
-          channelSwitchTimer = null;
-          y(p);
-        }, 10000);
-      }
+  function playChannel(index) {
+    if (channelSwitchTimer) {
+      clearTimeout(channelSwitchTimer);
+      channelSwitchTimer = null;
     }
-  }
-
-  function x() {
-    for (var e = document.querySelectorAll(".ch"), n = 0; n < e.length; n++) {
-      var t = parseInt(e[n].getAttribute("data-idx") || "-1", 10);
-      if (t === p) { e[n].focus(); return; }
-    }
-    e.length > 0 && e[0].focus();
-  }
-
-  function X() {
-    if (typeof window.NativePlayer !== "undefined") {
-      if (window.NativePlayer.isPlaying()) { window.NativePlayer.pause(); }
-      else if (nUrl) { window.NativePlayer.play(nUrl); }
+    if (index < 0 || index >= channelList.length || !videoElement) {
       return;
     }
-    if (a) {
-      if (a.paused) {
-        var e = a.play();
-        e && e.catch && e.catch(function() {});
-      } else { a.pause(); }
+
+    if (currentChannelIndex !== index && currentChannelIndex >= 0 && currentChannelIndex < channelList.length) {
+      prevChannelIdx = currentChannelIndex;
+    }
+
+    hasPlaybackStarted = true;
+    currentChannelIndex = index;
+    try {
+      localStorage.setItem(STORAGE_KEY_LAST_CHANNEL, String(index));
+    } catch (err) {}
+
+    var channel = channelList[index];
+    highlightChannel(index);
+    setNowPlaying("Now Playing: " + channel.name);
+    setStatus("Loading stream...");
+
+    if (typeof window.NativePlayer !== "undefined") {
+      currentNativeUrl = channel.url;
+      document.body.style.background = "transparent";
+      var playerWrap = document.getElementById("player-wrap");
+      if (playerWrap) playerWrap.style.background = "transparent";
+      var app = document.getElementById("app");
+      if (app) app.style.background = "transparent";
+      videoElement.style.background = "transparent";
+      videoElement.style.opacity = "0";
+      videoElement.controls = false;
+      window.NativePlayer.play(channel.url);
+    } else {
+      stopPlayback();
+      if (typeof Hls !== "undefined" && /\.m3u8/i.test(channel.url)) {
+        hlsInstance = new Hls();
+        hlsInstance.loadSource(channel.url);
+        hlsInstance.attachMedia(videoElement);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
+          videoElement.play()["catch"](function(err) {
+            setStatus("Error: " + (err && err.message ? err.message : "play failed"));
+          });
+          setStatus("Playing");
+        });
+        hlsInstance.on(Hls.Events.ERROR, function(event, data) {
+          if (data.fatal) {
+            setStatus("HLS error");
+            hlsInstance.destroy();
+            hlsInstance = null;
+          }
+        });
+      } else if (typeof mpegts !== "undefined" && !/\.mp4/i.test(channel.url)) {
+        try {
+          mpegtsInstance = new mpegts.Player(
+            { type: "mpegts", url: channel.url, isLive: true },
+            { enableWorker: false, lazyLoad: true, liveBufferLatency: 3 }
+          );
+          mpegtsInstance.attachMediaElement(videoElement);
+          mpegtsInstance.load();
+          var started = false;
+          var onPlayReady = function() {
+            if (!started) {
+              started = true;
+              videoElement.play()["catch"](function(err) {
+                setStatus("Error: " + (err.message || "play failed"));
+              });
+              setStatus("Playing");
+            }
+          };
+          videoElement.addEventListener("canplay", onPlayReady, { once: true });
+          videoElement.addEventListener("playing", onPlayReady, { once: true });
+          var tsTimer = setTimeout(function() {
+            onPlayReady();
+          }, 3000);
+          mpegtsInstance.on(mpegts.Events.ERROR, function(evt, data) {
+            setStatus("Stream error: " + (data || "unknown"));
+            mpegtsInstance.destroy();
+            mpegtsInstance = null;
+            clearTimeout(tsTimer);
+          });
+          mpegtsInstance.on(mpegts.Events.RECOVERED_EARLY_EOF, onPlayReady);
+        } catch (r) {
+          tryNativePlayback(channel.url);
+        }
+      } else {
+        tryNativePlayback(channel.url);
+      }
+    }
+    resetFullscreenTimer();
+  }
+
+  function navigateChannel(offset) {
+    if (channelList.length === 0) return;
+    var channels = document.querySelectorAll(".ch");
+    var cur = -1;
+    for (var j = 0; j < channels.length; j++) {
+      if (parseInt(channels[j].getAttribute("data-idx"), 10) === currentChannelIndex) {
+        cur = j;
+        break;
+      }
+    }
+    if (cur === -1) cur = 0;
+    var nxt = cur + offset;
+    if (nxt >= channels.length) nxt = 0;
+    if (nxt < 0) nxt = channels.length - 1;
+
+    var btn = channels[nxt];
+    var idx = parseInt(btn.getAttribute("data-idx"), 10);
+    currentChannelIndex = idx;
+    highlightChannel(idx);
+    btn.focus();
+
+    if (channelSwitchTimer) {
+      clearTimeout(channelSwitchTimer);
+    }
+    if (idx >= 0 && idx < channelList.length) {
+      var ch = channelList[idx];
+      setStatus("Auto switch in 10s: " + ch.name);
+      channelSwitchTimer = setTimeout(function() {
+        channelSwitchTimer = null;
+        playChannel(currentChannelIndex);
+      }, 10000);
     }
   }
 
-  function P(e) {
-    if (typeof window.NativePlayer !== "undefined") { window.NativePlayer.seek(e * 1e3); return; }
-    if (a) a.currentTime = Math.max(0, a.currentTime + e);
-  }
-  function A(e) {
-    if (typeof window.NativePlayer !== "undefined") { window.NativePlayer.setVolume(e); return; }
-    if (a) a.volume = Math.max(0, Math.min(1, a.volume + e));
-  }
-
-  function Y() {
-    if (v) {
-      var e = parseInt(v, 10);
-      v = "";
-      if (e === 0 && prevChannelIdx >= 0 && prevChannelIdx < i.length) {
-        y(prevChannelIdx);
-        x();
+  function focusCurrentChannel() {
+    var buttons = document.querySelectorAll(".ch");
+    for (var n = 0; n < buttons.length; n++) {
+      var idx = parseInt(buttons[n].getAttribute("data-idx") || "-1", 10);
+      if (idx === currentChannelIndex) {
+        buttons[n].focus();
         return;
       }
-      if (e >= 1 && e <= i.length) {
-        p = e - 1;
-        D(p);
-        x();
-        if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); }
-        var ch = i[p];
-        d("Auto switch in 10s: " + ch.name);
-        channelSwitchTimer = setTimeout(function() {
-          channelSwitchTimer = null;
-          y(p);
-        }, 10000);
+    }
+    if (buttons.length > 0) {
+      buttons[0].focus();
+    }
+  }
+
+  function togglePlayPause() {
+    if (typeof window.NativePlayer !== "undefined") {
+      if (window.NativePlayer.isPlaying()) {
+        window.NativePlayer.pause();
+      } else if (currentNativeUrl) {
+        window.NativePlayer.play(currentNativeUrl);
       }
+      return;
+    }
+    if (videoElement) {
+      if (videoElement.paused) {
+        var p = videoElement.play();
+        if (p && p["catch"]) p["catch"](function() {});
+      } else {
+        videoElement.pause();
+      }
+    }
+  }
+
+  function seekPlayback(seconds) {
+    if (typeof window.NativePlayer !== "undefined") {
+      window.NativePlayer.seek(seconds * 1000);
+      return;
+    }
+    if (videoElement) {
+      videoElement.currentTime = Math.max(0, videoElement.currentTime + seconds);
+    }
+  }
+
+  function adjustVolume(delta) {
+    if (typeof window.NativePlayer !== "undefined") {
+      window.NativePlayer.setVolume(delta);
+      return;
+    }
+    if (videoElement) {
+      videoElement.volume = Math.max(0, Math.min(1, videoElement.volume + delta));
+    }
+  }
+
+  function handleNumberKeyCommit() {
+    if (!numberKeyBuffer) return;
+    var num = parseInt(numberKeyBuffer, 10);
+    numberKeyBuffer = "";
+
+    if (num === 0 && prevChannelIdx >= 0 && prevChannelIdx < channelList.length) {
+      playChannel(prevChannelIdx);
+      focusCurrentChannel();
+      return;
+    }
+
+    if (num >= 1 && num <= channelList.length) {
+      currentChannelIndex = num - 1;
+      highlightChannel(currentChannelIndex);
+      focusCurrentChannel();
+      if (channelSwitchTimer) {
+        clearTimeout(channelSwitchTimer);
+      }
+      var ch = channelList[currentChannelIndex];
+      setStatus("Auto switch in 10s: " + ch.name);
+      channelSwitchTimer = setTimeout(function() {
+        channelSwitchTimer = null;
+        playChannel(currentChannelIndex);
+      }, 10000);
     }
   }
 
   function resetPlaylist() {
-    try { localStorage.removeItem(LS); } catch (r) {}
-    I = "";
+    try {
+      localStorage.removeItem(STORAGE_KEY_PLAYLIST);
+    } catch (r) {}
+    savedPlaylistUrl = "";
     showSetup();
   }
 
   function showSetup() {
     var code = makeSetupCode();
     setupCode = code;
-    document.body.innerHTML = '<div id="app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;padding:20px"><h1 style="font-size:28px;font-weight:600;margin-bottom:8px">IPTV Player</h1><p style="color:#888;margin-bottom:20px">Scan this QR code with your phone to submit your M3U playlist URL.</p><div id="qr" style="background:#fff;padding:8px;border-radius:8px;margin-bottom:16px"></div><div id="setup-url" style="color:#aaa;font-size:12px;word-break:break-all;max-width:360px;text-align:center;margin-bottom:8px">' + setupUrl(code) + '</div><div id="setup-code" style="color:#ffd600;font-size:20px;font-weight:700;margin-bottom:8px">Code: ' + code + '</div><div id="st" style="color:#ffd600">Scan QR to set playlist URL</div></div>';
+    document.body.innerHTML = '<div id="app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;padding:20px">' +
+      '<h1 style="font-size:28px;font-weight:600;margin-bottom:8px">IPTV Player</h1>' +
+      '<p style="color:#888;margin-bottom:20px">Scan this QR code with your phone to submit your M3U playlist URL.</p>' +
+      '<div id="qr" style="background:#fff;padding:8px;border-radius:8px;margin-bottom:16px"></div>' +
+      '<div id="setup-url" style="color:#aaa;font-size:12px;word-break:break-all;max-width:360px;text-align:center;margin-bottom:8px">' + setupUrl(code) + '</div>' +
+      '<div id="setup-code" style="color:#ffd600;font-size:20px;font-weight:700;margin-bottom:8px">Code: ' + code + '</div>' +
+      '<div id="st" style="color:#ffd600">Scan QR to set playlist URL</div>' +
+    '</div>';
+
     var qrDiv = document.getElementById("qr");
     new QRCode(qrDiv, { text: setupUrl(code), width: 220, height: 220 });
     startSetupPolling();
@@ -829,107 +1142,151 @@
   function startSetupPolling() {
     clearSetupTimer();
     setupTimer = setInterval(function() {
-      xhrGetText(W + "/api/config?code=" + encodeURIComponent(setupCode), function(err, status, text) {
-        if (err) { d("Setup poll failed: " + (err.message || "unknown")); return; }
+      xhrGetText(SETUP_SERVICE_URL + "/api/config?code=" + encodeURIComponent(setupCode), function(err, status, text) {
+        if (err) {
+          setStatus("Setup poll failed: " + (err.message || "unknown"));
+          return;
+        }
         if (status === 404) return;
-        if (status < 200 || status >= 300) { d("Setup poll failed: HTTP " + status); return; }
+        if (status < 200 || status >= 300) {
+          setStatus("Setup poll failed: HTTP " + status);
+          return;
+        }
         try {
           var data = JSON.parse(text);
           if (data && typeof data.playlistUrl === "string" && data.playlistUrl) {
             clearSetupTimer();
             savePlaylistUrl(data.playlistUrl);
-            U();
-            K();
+            renderAppLayout();
+            fetchPlaylist();
           }
         } catch (parseErr) {
-          d("Setup poll failed: bad response");
+          setStatus("Setup poll failed: bad response");
         }
       });
     }, 3000);
   }
 
-  function G(e) {
-    g();
-    var n = e.key && e.key !== "Unidentified" ? e.key : B[e.keyCode];
-    switch (n) {
+  function handleKeyDown(event) {
+    resetFullscreenTimer();
+    var key = event.key && event.key !== "Unidentified" ? event.key : TIZEN_KEY_MAP[event.keyCode];
+    switch (key) {
       case "ArrowUp":
       case "ChannelUp":
-        e.preventDefault(), L(-1);
+        event.preventDefault();
+        navigateChannel(-1);
         break;
       case "ArrowDown":
       case "ChannelDown":
-        e.preventDefault(), L(1);
+        event.preventDefault();
+        navigateChannel(1);
         break;
       case "ArrowLeft":
-        e.preventDefault(), P(-10);
+        event.preventDefault();
+        seekPlayback(-10);
         break;
       case "ArrowRight":
-        e.preventDefault(), P(10);
+        event.preventDefault();
+        seekPlayback(10);
         break;
       case "Enter":
-        e.preventDefault();
-        if (channelSwitchTimer) { clearTimeout(channelSwitchTimer); channelSwitchTimer = null; }
-        if (p === i.length) { resetPlaylist(); } else { y(p); }
+        event.preventDefault();
+        if (channelSwitchTimer) {
+          clearTimeout(channelSwitchTimer);
+          channelSwitchTimer = null;
+        }
+        if (currentChannelIndex === channelList.length) {
+          resetPlaylist();
+        } else {
+          playChannel(currentChannelIndex);
+        }
         break;
       case " ":
       case "MediaPlayPause":
       case "MediaPlay":
       case "MediaPause":
-        e.preventDefault(), X();
+        event.preventDefault();
+        togglePlayPause();
         break;
       case "VolumeUp":
-        e.preventDefault(), A(0.1);
+        event.preventDefault();
+        adjustVolume(0.1);
         break;
       case "VolumeDown":
-        e.preventDefault(), A(-0.1);
+        event.preventDefault();
+        adjustVolume(-0.1);
         break;
       case "Backspace":
       case "Escape":
-        e.preventDefault();
+        event.preventDefault();
         var appEl = document.getElementById("app");
         var isFullscreen = appEl && appEl.className.indexOf("fullscreen-mode") !== -1;
-        if (isFullscreen && prevChannelIdx >= 0 && prevChannelIdx < i.length) {
-          y(prevChannelIdx);
-          x();
+        if (isFullscreen && prevChannelIdx >= 0 && prevChannelIdx < channelList.length) {
+          playChannel(prevChannelIdx);
+          focusCurrentChannel();
         } else {
-          x();
+          focusCurrentChannel();
         }
         break;
       case "ColorF2Yellow":
-        e.preventDefault(), resetPlaylist();
+        event.preventDefault();
+        resetPlaylist();
         break;
       case "MediaStop":
-        e.preventDefault();
+        event.preventDefault();
         stopPlayback();
         break;
       default:
-        n && n >= "0" && n <= "9" && (e.preventDefault(), v += n, w && clearTimeout(w), w = setTimeout(Y, 1e3));
+        if (key && key >= "0" && key <= "9") {
+          event.preventDefault();
+          numberKeyBuffer += key;
+          if (numberKeyTimer) {
+            clearTimeout(numberKeyTimer);
+          }
+          numberKeyTimer = setTimeout(handleNumberKeyCommit, 1000);
+        }
         break;
     }
   }
 
-  function J() {
+  function registerTizenKeys() {
     try {
-      var e = window.tizen && window.tizen.tvinputdevice;
-      if (!e) return;
-      for (var n = ["MediaPlay", "MediaPause", "MediaStop", "ChannelUp", "ChannelDown", "ColorF2Yellow"], t = 0; t < n.length; t++) e.registerKey(n[t]);
+      if (!window.tizen || !window.tizen.tvinputdevice) return;
+      var keys = ["MediaPlay", "MediaPause", "MediaStop", "ChannelUp", "ChannelDown", "ColorF2Yellow"];
+      for (var t = 0; t < keys.length; t++) {
+        window.tizen.tvinputdevice.registerKey(keys[t]);
+      }
     } catch (r) {}
   }
 
-  function O() {
-    U();
-    J();
-    document.addEventListener("keydown", G);
-    document.addEventListener("click", g);
-    document.addEventListener("mousemove", g);
-    try { I = localStorage.getItem(LS) || ""; } catch (err) { I = ""; }
-    if (I) K(); else showSetup();
+  function initApp() {
+    renderAppLayout();
+    registerTizenKeys();
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("click", resetFullscreenTimer);
+    document.addEventListener("mousemove", resetFullscreenTimer);
+
+    try {
+      savedPlaylistUrl = localStorage.getItem(STORAGE_KEY_PLAYLIST) || "";
+    } catch (err) {
+      savedPlaylistUrl = "";
+    }
+
+    if (savedPlaylistUrl) {
+      fetchPlaylist();
+    } else {
+      showSetup();
+    }
   }
 
-  window._onNativeReady = function() { d("Playing"); };
-  window._onNativeEnded = function() { d("Stream ended"); };
-  window._onNativeError = function(msg) { d("Error: " + (msg || "unknown")); };
-  window._onUpdateStatus = function(msg) { d(msg || ""); };
+  window._onNativeReady = function() { setStatus("Playing"); };
+  window._onNativeEnded = function() { setStatus("Stream ended"); };
+  window._onNativeError = function(msg) { setStatus("Error: " + (msg || "unknown")); };
+  window._onUpdateStatus = function(msg) { setStatus(msg || ""); };
 
-  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", O) : O();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initApp);
+  } else {
+    initApp();
+  }
 })();
