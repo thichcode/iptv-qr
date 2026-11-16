@@ -58,3 +58,9 @@ test('inject.js maintains Tizen key codes and player fallbacks', () => {
   assert.match(injectCode, /Hls/, 'expected Hls fallback for Tizen');
   assert.match(injectCode, /mpegts/, 'expected mpegts fallback for Tizen');
 });
+
+test('inject.js displays on-screen channel number badge with 5-second switch delay', () => {
+  assert.match(injectCode, /#channel-badge/, 'expected #channel-badge element in styles/markup');
+  assert.match(injectCode, /5000/, 'expected 5000ms delay for number key channel switch');
+});
+

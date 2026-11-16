@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "tizenbrew-iptv",
   "displayName": "IPTV Player",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "IPTV Player for TizenBrew with QR playlist setup",
   "targetUrl": "https://localhost",
   "assets": {

@@ -48,7 +48,7 @@
 
   function injectStyles() {
     var style = document.createElement("style");
-    style.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh;position:relative}header{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 100%);z-index:10}header h1{font-size:26px;font-weight:600}#cnt{font-size:18px;color:#ffd600}#clock{font-size:22px;font-weight:600;color:#ffd600;letter-spacing:1px;font-variant-numeric:tabular-nums}#main{width:100vw;height:100vh;position:relative;overflow:hidden}#player-wrap{position:absolute;inset:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:transparent;z-index:1}#player{width:100vw;height:100vh;max-height:none;background:transparent;object-fit:contain}#list{position:absolute;top:54px;bottom:54px;right:0;width:280px;background:rgba(18,18,18,0.65);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.12);overflow-y:auto;padding:8px 0;z-index:10}.grp{padding:8px 16px 4px;font-size:16px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:10px 16px;border:none;background:none;color:#fff;font-size:22px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:rgba(255,214,0,0.25);color:#ffd600;outline:2px solid #ffd600;outline-offset:-2px}.ch.on{background:rgba(255,255,255,0.1);border-left:4px solid #ffd600;padding-left:12px}#bar{position:absolute;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%);font-size:20px;z-index:10}#now{color:#ffd600;font-weight:500}#st{color:#ddd}#list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-track{background:transparent}#list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:3px}.menu-item{border-top:1px solid rgba(255,255,255,0.15);margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}';
+    style.textContent = '*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;height:100vh;overflow:hidden}#app{display:flex;flex-direction:column;height:100vh;position:relative}#channel-badge{position:absolute;top:28px;right:32px;background:rgba(0,0,0,0.85);color:#ffd600;font-size:46px;font-weight:700;padding:10px 24px;border-radius:10px;border:2px solid #ffd600;box-shadow:0 4px 20px rgba(0,0,0,0.7);z-index:99;display:none;pointer-events:none;letter-spacing:2px}header{position:absolute;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:linear-gradient(180deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 100%);z-index:10}header h1{font-size:26px;font-weight:600}#cnt{font-size:18px;color:#ffd600}#clock{font-size:22px;font-weight:600;color:#ffd600;letter-spacing:1px;font-variant-numeric:tabular-nums}#main{width:100vw;height:100vh;position:relative;overflow:hidden}#player-wrap{position:absolute;inset:0;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center;background:transparent;z-index:1}#player{width:100vw;height:100vh;max-height:none;background:transparent;object-fit:contain}#list{position:absolute;top:54px;bottom:54px;right:0;width:280px;background:rgba(18,18,18,0.65);backdrop-filter:blur(10px);border-left:1px solid rgba(255,255,255,0.12);overflow-y:auto;padding:8px 0;z-index:10}.grp{padding:8px 16px 4px;font-size:16px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:1px}.ch{display:block;width:100%;padding:10px 16px;border:none;background:none;color:#fff;font-size:22px;text-align:left;cursor:pointer}.ch:hover,.ch:focus{background:rgba(255,214,0,0.25);color:#ffd600;outline:2px solid #ffd600;outline-offset:-2px}.ch.on{background:rgba(255,255,255,0.1);border-left:4px solid #ffd600;padding-left:12px}#bar{position:absolute;bottom:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:10px 24px;background:linear-gradient(0deg,rgba(0,0,0,0.85) 0%,rgba(0,0,0,0) 100%);font-size:20px;z-index:10}#now{color:#ffd600;font-weight:500}#st{color:#ddd}#list::-webkit-scrollbar{width:6px}#list::-webkit-scrollbar-track{background:transparent}#list::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:3px}.menu-item{border-top:1px solid rgba(255,255,255,0.15);margin-top:8px;color:#ffd600;font-weight:600}#app.fullscreen-mode header,#app.fullscreen-mode #list,#app.fullscreen-mode #bar{display:none}#app.fullscreen-mode #main{display:block;height:100vh}#app.fullscreen-mode #player-wrap{width:100vw;height:100vh}#app.fullscreen-mode #player{width:100vw;height:100vh;max-height:none}';
     document.head.appendChild(style);
   }
 
@@ -64,6 +64,7 @@
   function renderAppLayout() {
     injectStyles();
     document.body.innerHTML = '<div id="app">' +
+      '<div id="channel-badge"></div>' +
       '<header>' +
         '<h1>IPTV Player</h1>' +
         '<div style="display:flex;align-items:center;gap:18px">' +
@@ -88,6 +89,21 @@
 
     updateClock();
     setInterval(updateClock, 10000);
+  }
+
+  function showChannelBadge(text) {
+    var badge = document.getElementById("channel-badge");
+    if (!badge) return;
+    badge.textContent = text;
+    badge.style.display = "block";
+  }
+
+  function hideChannelBadge() {
+    var badge = document.getElementById("channel-badge");
+    if (badge) {
+      badge.style.display = "none";
+      badge.textContent = "";
+    }
   }
 
   function setStatus(text) {
@@ -1088,9 +1104,17 @@
   }
 
   function handleNumberKeyCommit() {
-    if (!numberKeyBuffer) return;
+    if (numberKeyTimer) {
+      clearTimeout(numberKeyTimer);
+      numberKeyTimer = null;
+    }
+    if (!numberKeyBuffer) {
+      hideChannelBadge();
+      return;
+    }
     var num = parseInt(numberKeyBuffer, 10);
     numberKeyBuffer = "";
+    hideChannelBadge();
 
     if (num === 0 && prevChannelIdx >= 0 && prevChannelIdx < channelList.length) {
       playChannel(prevChannelIdx);
@@ -1102,15 +1126,9 @@
       currentChannelIndex = num - 1;
       highlightChannel(currentChannelIndex);
       focusCurrentChannel();
-      if (channelSwitchTimer) {
-        clearTimeout(channelSwitchTimer);
-      }
-      var ch = channelList[currentChannelIndex];
-      setStatus("Auto switch in 10s: " + ch.name);
-      channelSwitchTimer = setTimeout(function() {
-        channelSwitchTimer = null;
-        playChannel(currentChannelIndex);
-      }, 10000);
+      playChannel(currentChannelIndex);
+    } else {
+      setStatus("Channel " + num + " not found");
     }
   }
 
@@ -1195,6 +1213,10 @@
           clearTimeout(channelSwitchTimer);
           channelSwitchTimer = null;
         }
+        if (numberKeyTimer) {
+          handleNumberKeyCommit();
+          return;
+        }
         if (currentChannelIndex === channelList.length) {
           resetPlaylist();
         } else {
@@ -1219,6 +1241,14 @@
       case "Backspace":
       case "Escape":
         event.preventDefault();
+        if (numberKeyTimer) {
+          clearTimeout(numberKeyTimer);
+          numberKeyTimer = null;
+          numberKeyBuffer = "";
+          hideChannelBadge();
+          setStatus("Cancelled");
+          return;
+        }
         var appEl = document.getElementById("app");
         var isFullscreen = appEl && appEl.className.indexOf("fullscreen-mode") !== -1;
         if (isFullscreen && prevChannelIdx >= 0 && prevChannelIdx < channelList.length) {
@@ -1240,10 +1270,12 @@
         if (key && key >= "0" && key <= "9") {
           event.preventDefault();
           numberKeyBuffer += key;
+          showChannelBadge("CH: " + numberKeyBuffer);
+          setStatus("Switching to CH: " + numberKeyBuffer + " in 5s (or Enter)...");
           if (numberKeyTimer) {
             clearTimeout(numberKeyTimer);
           }
-          numberKeyTimer = setTimeout(handleNumberKeyCommit, 1000);
+          numberKeyTimer = setTimeout(handleNumberKeyCommit, 5000);
         }
         break;
     }
